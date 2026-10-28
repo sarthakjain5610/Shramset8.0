@@ -1,0 +1,21 @@
+{
+  "name": "Shram Setu 2.0 — Verified Work & Wage Records",
+  "short_name": "Shram Setu",
+  "description": "Tamper-evident digital work records, QR work passes and statutory wage protection for informal and construction workers.",
+  "start_url": "/#/home",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fdfbf6",
+  "theme_color": "#163a2b",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "utilities", "government"],
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/assets/images/shram_setu_hero_pass_1792385013356.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}
