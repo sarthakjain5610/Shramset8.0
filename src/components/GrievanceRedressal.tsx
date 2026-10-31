@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   AlertTriangle, 
   FileText, 
@@ -7,6 +7,7 @@ import {
   Copy, 
   Check, 
   Volume2, 
+  Square,
   ShieldAlert, 
   Scale, 
   MessageSquare,
@@ -45,6 +46,13 @@ export const GrievanceRedressal: React.FC<GrievanceRedressalProps> = ({
   // Contractor response state
   const [contractorRebuttalText, setContractorRebuttalText] = useState('');
   const [showResponseForm, setShowResponseForm] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(speech.getIsSpeaking());
+
+  useEffect(() => {
+    return speech.subscribe((speaking) => {
+      setIsSpeaking(speaking);
+    });
+  }, []);
 
   const handleSubmitDispute = (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,7 +144,7 @@ export const GrievanceRedressal: React.FC<GrievanceRedressalProps> = ({
           : 'ओवरटाइम कार्य का भुगतान न किया जाना'
       }
 4. कुल बकाया दावा राशि: ₹${g.claimedAmount} (रुपये ${g.claimedAmount} मात्र)
-5. संलग्न साक्ष्य: श्रम सेतु 2.0 डिजिटल मस्टर रोल के ${g.evidenceMusterCount} सत्यापित कार्य दिवस।
+5. संलग्न साक्ष्य: WurkUp डिजिटल मस्टर रोल के ${g.evidenceMusterCount} सत्यापित कार्य दिवस।
 
 श्रमिक का अभिकथन:
 "${g.description}"
@@ -146,7 +154,7 @@ ${g.contractorResponse ? `अनावेदक ठेकेदार का प
 
 हस्ताक्षर / अंगूठा निशान:
 ${worker.hindiName} (प्रार्थी श्रमिक)
-सत्यापित डिजिटल प्रतिलिपि - श्रम सेतु 2.0 (वरिष्ठ बाल विज्ञान नवाचार, इंदौर)
+सत्यापित डिजिटल प्रतिलिपि - WurkUp (वरिष्ठ बाल विज्ञान नवाचार, इंदौर)
 आधिकारिक सहायता हेल्पलाइन: ${APP_CONFIG.CONTACT_PHONE}`;
     }
 
@@ -175,7 +183,7 @@ The applicant ${worker.name} (e-Shram UAN: ${worker.eShramUAN}, MP BOCW Reg: ${w
         : 'Denial of Statutory Overtime Compensation'
     }
 4. Total Claimed Unpaid Amount: ₹${g.claimedAmount} (Rupees ${g.claimedAmount} only)
-5. Primary Evidentiary Records: ${g.evidenceMusterCount} verified muster roll records certified on Shram Setu 2.0.
+5. Primary Evidentiary Records: ${g.evidenceMusterCount} verified muster roll records certified on WurkUp.
 
 Worker's Statement of Claim:
 "${g.description}"
@@ -186,7 +194,7 @@ It is respectfully prayed that this Authority issue urgent statutory notice to t
 
 Signature of Applicant Worker:
 ${worker.name}
-Verified Digital Copy — Shram Setu 2.0 Civic Labor Platform (Indore, MP)
+Verified Digital Copy — WurkUp Civic Labor Platform (Indore, MP)
 Official Support Helpline: ${APP_CONFIG.CONTACT_PHONE}`;
   };
 
@@ -199,6 +207,11 @@ Official Support Helpline: ${APP_CONFIG.CONTACT_PHONE}`;
   };
 
   const handleSpeakNotice = () => {
+    if (isSpeaking) {
+      speech.stop();
+      return;
+    }
+
     if (!selectedGrievanceForNotice) return;
     if (lang === 'hi') {
       speech.speak(
@@ -428,10 +441,19 @@ Official Support Helpline: ${APP_CONFIG.CONTACT_PHONE}`;
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={handleSpeakNotice}
-                    className="p-1 text-ink-400 hover:text-white cursor-pointer"
-                    title={t('listenAudio', lang)}
+                    className={`p-1 rounded transition-colors cursor-pointer ${
+                      isSpeaking
+                        ? 'text-rose-400 bg-rose-500/20 ring-1 ring-rose-400/50'
+                        : 'text-ink-400 hover:text-white'
+                    }`}
+                    title={isSpeaking ? t('stopAudio', lang) : t('listenAudio', lang)}
+                    aria-label={isSpeaking ? t('stopAudio', lang) : t('listenAudio', lang)}
                   >
-                    <Volume2 className="w-4 h-4 text-brass-400" />
+                    {isSpeaking ? (
+                      <Square className="w-4 h-4 fill-current text-rose-400 animate-pulse" />
+                    ) : (
+                      <Volume2 className="w-4 h-4 text-brass-400" />
+                    )}
                   </button>
 
                   <button

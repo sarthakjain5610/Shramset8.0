@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   Volume2,
+  Square,
   Globe,
   Award,
   LogIn,
@@ -18,6 +19,7 @@ import {
   QrCode,
   AlertTriangle,
   HeartHandshake,
+  UserCheck,
 } from 'lucide-react';
 import { Worker, UserProfile } from '../types';
 import { Language } from '../services/i18n';
@@ -91,15 +93,20 @@ const LanguageSwitch: React.FC<{ lang: Language; onToggle: () => void }> = ({ la
   </button>
 );
 
-/** Speaker button for the audio brand readout. */
-const AudioButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+/** Speaker button for the audio brand readout with toggleable stop state. */
+const AudioButton: React.FC<{ onClick: () => void; isSpeaking?: boolean }> = ({ onClick, isSpeaking }) => (
   <button
+    type="button"
     onClick={onClick}
-    className="grid h-9 w-9 place-items-center rounded-full border border-transparent text-ink-500 transition-all hover:border-ink-200 hover:bg-white hover:text-forest-800 cursor-pointer"
-    title="Listen to an audio overview"
-    aria-label="Listen to an audio overview of Shram Setu"
+    className={`grid h-9 w-9 place-items-center rounded-full border transition-all cursor-pointer ${
+      isSpeaking
+        ? 'border-rose-400 bg-rose-50 text-rose-700 ring-2 ring-rose-300 animate-pulse'
+        : 'border-transparent text-ink-500 hover:border-ink-200 hover:bg-white hover:text-forest-800'
+    }`}
+    title={isSpeaking ? 'Stop audio' : 'Listen to an audio overview'}
+    aria-label={isSpeaking ? 'Stop audio' : 'Listen to an audio overview of WurkUp'}
   >
-    <Volume2 className="h-4 w-4" />
+    {isSpeaking ? <Square className="h-3.5 w-3.5 fill-rose-600 text-rose-600" /> : <Volume2 className="h-4 w-4" />}
   </button>
 );
 
@@ -112,6 +119,9 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectTab = () => {},
   lang,
   onToggleLang,
+  workers = [],
+  selectedWorkerId = '',
+  onSelectWorker,
   onOpenJudgeTourModal,
   onEnterJudgeDemo = () => {},
 }) => {
@@ -122,6 +132,11 @@ export const Header: React.FC<HeaderProps> = ({
   const copy = getPublicCopy(lang);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(speech.getIsSpeaking());
+
+  useEffect(() => {
+    return speech.subscribe(setIsSpeaking);
+  }, []);
 
   // Soft elevation once the page leaves the very top.
   useEffect(() => {
@@ -142,14 +157,18 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   const handleSpeakBrand = () => {
+    if (isSpeaking) {
+      speech.stop();
+      return;
+    }
     if (lang === 'hi') {
       speech.speak(
-        'श्रम सेतु 2.0। असंगठित एवं दैनिक वेतन भोगी श्रमिकों के लिए डिजिटल वर्क पास एवं मजदूरी सुरक्षा प्रणाली। वरिष्ठ बाल विज्ञान नवाचार, इंदौर मध्य प्रदेश। हेल्पलाइन 7909348017।',
+        'WurkUp। असंगठित एवं दैनिक वेतन भोगी श्रमिकों के लिए डिजिटल वर्क पास एवं मजदूरी सुरक्षा प्रणाली। वरिष्ठ बाल विज्ञान नवाचार, इंदौर मध्य प्रदेश। हेल्पलाइन 7909348017।',
         'hi-IN'
       );
     } else {
       speech.speak(
-        'Shram Setu 2.0. Digital work pass, attendance verification, and wage protection platform for informal workers. Senior Bal Vigyan innovation, Indore MP. Helpline 7909348017.',
+        'WurkUp. Digital work pass, attendance verification, and wage protection platform for informal workers. Senior Bal Vigyan innovation, Indore MP. Helpline 7909348017.',
         'en-IN'
       );
     }
@@ -197,7 +216,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-display text-[1.0625rem] font-semibold leading-none text-ink-950">
-                    Shram Setu
+                    WurkUp
                   </span>
                   <span
                     className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
@@ -230,7 +249,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               </div>
 
-              <AudioButton onClick={handleSpeakBrand} />
+              <AudioButton onClick={handleSpeakBrand} isSpeaking={isSpeaking} />
               <LanguageSwitch lang={lang} onToggle={onToggleLang} />
 
               {isJudgeDemo && onOpenJudgeTourModal && (
@@ -257,9 +276,9 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Judge demo tab rail */}
           {isJudgeDemo && (
             <div className="border-t border-sand-200/80 bg-white/60">
-              <div className="container-page">
+              <div className="container-page flex flex-wrap items-center justify-between gap-2 py-1">
                 <div
-                  className="hide-scrollbar -mb-px flex items-center gap-1 overflow-x-auto py-1.5"
+                  className="hide-scrollbar -mb-px flex items-center gap-1 overflow-x-auto py-0.5"
                   role="tablist"
                   aria-label="Demo sections"
                 >
@@ -291,6 +310,29 @@ export const Header: React.FC<HeaderProps> = ({
                     );
                   })}
                 </div>
+
+                {/* Worker Profile Switcher for evaluation */}
+                {workers.length > 0 && onSelectWorker && (
+                  <div className="flex items-center gap-1.5 py-0.5 shrink-0 text-xs">
+                    <UserCheck className="h-3.5 w-3.5 text-forest-700 shrink-0" />
+                    <label htmlFor="header-worker-select" className="text-[11px] font-bold text-ink-600 hidden sm:inline">
+                      {lang === 'hi' ? 'श्रमिक चुनें:' : 'Worker:'}
+                    </label>
+                    <select
+                      id="header-worker-select"
+                      value={selectedWorkerId}
+                      onChange={(e) => onSelectWorker(e.target.value)}
+                      className="rounded-lg border border-sand-300 bg-white px-2 py-1 text-[11px] font-bold text-ink-900 shadow-2xs focus:border-forest-500 focus:outline-none cursor-pointer max-w-[180px] sm:max-w-none truncate"
+                      aria-label="Select worker profile"
+                    >
+                      {workers.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.name} ({w.trade.split('(')[0].trim()})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -325,10 +367,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="min-w-0">
               <span className="flex items-center gap-2">
                 <span className="font-display text-[1.125rem] font-semibold leading-none tracking-tight text-ink-950 transition-colors group-hover:text-forest-800">
-                  Shram Setu
-                </span>
-                <span className="rounded-full border border-brass-300/70 bg-brass-50 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-brass-800">
-                  2.0
+                  WurkUp
                 </span>
               </span>
               <span className="mt-1 hidden text-[9.5px] font-semibold uppercase tracking-[0.16em] text-ink-400 sm:block">
@@ -366,7 +405,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Actions */}
           <div className="flex items-center gap-1.5 sm:gap-2">
             <div className="hidden lg:block">
-              <AudioButton onClick={handleSpeakBrand} />
+              <AudioButton onClick={handleSpeakBrand} isSpeaking={isSpeaking} />
             </div>
             <LanguageSwitch lang={lang} onToggle={onToggleLang} />
 

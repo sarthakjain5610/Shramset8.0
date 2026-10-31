@@ -13,7 +13,7 @@ const sizes: Record<NonNullable<BrandMarkProps['size']>, string> = {
 };
 
 /**
- * Shram Setu mark: a suspension bridge (setu) in brass over deep forest.
+ * WurkUp mark: an artisan bridge/arch mark in brass over deep forest.
  * Small enough to work as a favicon, distinctive at 40px.
  */
 export const BrandMark: React.FC<BrandMarkProps> = ({ size = 'md', className = '' }) => {

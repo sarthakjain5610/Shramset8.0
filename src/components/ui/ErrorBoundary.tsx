@@ -18,7 +18,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     // Kept in the console so a support call can ask for a screenshot of it.
-    console.error('[Shram Setu] Screen failed to render:', error, info.componentStack);
+    console.error('[WurkUp] Screen failed to render:', error, info.componentStack);
   }
 
   private reset = () => {

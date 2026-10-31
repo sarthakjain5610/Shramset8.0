@@ -184,7 +184,7 @@ export const SignIn: React.FC<SignInProps> = ({ onNavigate, onEnterJudgeDemo }) 
         </button>
 
         <p className="pt-1 text-center text-[11.5px] text-ink-500">
-          New to Shram Setu?{' '}
+          New to WurkUp?{' '}
           <button
             type="button"
             onClick={() => onNavigate('create-account')}

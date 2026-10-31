@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { QRCodeDisplay } from './QRCodeDisplay';
 import { buildVerifyUrl } from '../services/verifyLink';
 import { 
   RotateCw, 
   Volume2, 
+  VolumeX,
+  Square,
   Printer, 
   ShieldCheck, 
   CheckCircle,
@@ -15,18 +17,27 @@ import {
   Copy,
   Check,
   FileText,
-  X
+  X,
+  Star,
+  MoreVertical,
+  Share2,
+  Download,
+  PhoneCall
 } from 'lucide-react';
-import { Worker, ConstructionSite } from '../types';
+import { Worker, ConstructionSite, WorkerRatingSummary } from '../types';
 import { 
   Language, 
   t, 
+  bi,
   formatCurrency, 
   getLocalizedTrade, 
   getLocalizedSkill 
 } from '../services/i18n';
 import { speech } from '../services/speech';
 import { APP_CONFIG } from '../config';
+import { db } from '../services/db';
+import { WorkerRatingModal } from './WorkerRatingModal';
+import { downloadWorkerVCard, exportWorkerJsonPassport } from '../services/workerExport';
 
 const DEFAULT_WORKER_AVATAR = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="120" viewBox="0 0 100 120"><rect width="100" height="120" fill="%23f1f5f9"/><circle cx="50" cy="42" r="22" fill="%23cbd5e1"/><path d="M18 108 C18 78 82 78 82 108" fill="%2394a3b8"/><rect x="36" y="22" width="28" height="6" rx="3" fill="%23ea580c"/></svg>`;
 
@@ -54,14 +65,71 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
   const [isFlipped, setIsFlipped] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [showMoreOptions, setShowMoreOptions] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [copiedRecord, setCopiedRecord] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [printError, setPrintError] = useState<string | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(speech.getIsSpeaking());
+  const [ratingSummary, setRatingSummary] = useState<WorkerRatingSummary>(() => 
+    worker ? db.getWorkerRatingSummary(worker.id) : {
+      average: 5.0,
+      totalReviews: 0,
+      craftsmanship: 5.0,
+      punctuality: 5.0,
+      safetyCompliance: 5.0,
+    }
+  );
+
+  const moreOptionsMenuRef = useRef<HTMLDivElement>(null);
+  const moreOptionsBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Sync rating summary whenever worker changes
+  useEffect(() => {
+    if (worker) {
+      setRatingSummary(db.getWorkerRatingSummary(worker.id));
+    }
+  }, [worker?.id]);
+
+  // Click outside to dismiss More Options dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showMoreOptions &&
+        moreOptionsMenuRef.current &&
+        !moreOptionsMenuRef.current.contains(event.target as Node) &&
+        moreOptionsBtnRef.current &&
+        !moreOptionsBtnRef.current.contains(event.target as Node)
+      ) {
+        setShowMoreOptions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMoreOptions]);
+
+  // Subscribe to speech service for instant Stop / Listen button updates
+  useEffect(() => {
+    return speech.subscribe((speaking) => {
+      setIsSpeaking(speaking);
+    });
+  }, []);
+
+  // Graceful fallback if worker profile is not yet available
+  if (!worker) {
+    return (
+      <div className="p-8 text-center text-ink-500 bg-white rounded-2xl border border-sand-200">
+        <p className="text-sm font-semibold">{lang === 'hi' ? 'श्रमिक प्रोफ़ाइल लोड हो रही है...' : 'Loading worker profile...'}</p>
+      </div>
+    );
+  }
 
   // Derive normalized stat metrics
-  const displayEarned = stats.grossWagesEarned ?? stats.totalEarned ?? 0;
-  const displayAdvances = stats.paymentsRecorded ?? stats.totalAdvancesTaken ?? 0;
-  const displayBalanceDue = stats.outstandingBalance ?? stats.netBalanceDue ?? 0;
+  const displayEarned = stats?.grossWagesEarned ?? stats?.totalEarned ?? 0;
+  const displayAdvances = stats?.paymentsRecorded ?? stats?.totalAdvancesTaken ?? 0;
+  const displayBalanceDue = stats?.outstandingBalance ?? stats?.netBalanceDue ?? 0;
+  const totalDays = stats?.totalDaysWorked ?? 0;
 
   // Preload worker photo asset so it is hot in browser cache before print is triggered
   useEffect(() => {
@@ -89,16 +157,25 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
   const skillInfo = getLocalizedSkill(worker.skillLevel, lang);
   const siteName = lang === 'hi' && site?.hindiName ? site.hindiName : (site?.name || worker.activeSiteId);
 
-  const handleSpeakCard = () => {
+  const handleToggleSpeak = () => {
+    if (isSpeaking) {
+      speech.stop();
+      return;
+    }
+
+    const wagePhrase = displayBalanceDue > 0
+      ? (lang === 'hi' ? `वर्तमान बकाया शुद्ध मजदूरी ₹${displayBalanceDue}।` : `Net wage balance due ₹${displayBalanceDue}.`)
+      : (lang === 'hi' ? 'सभी देय मजदूरी का भुगतान पूर्ण है।' : 'All wages settled in full.');
+
     if (lang === 'hi') {
-      const msg = `${worker.hindiName}। पेशा: ${localizedTrade}। कौशल स्तर: ${skillInfo.label}। दैनिक सांविधिक मजदूरी ₹${worker.dailyBaseWage}। कुल सत्यापित कार्य दिवस: ${
-        stats.totalDaysWorked
-      } दिन। वर्तमान बकाया शुद्ध मजदूरी ₹${stats.netBalanceDue}। कार्य स्थल: ${siteName}। हेल्पलाइन ${APP_CONFIG.CONTACT_PHONE}।`;
+      const msg = `${worker.hindiName || worker.name}। पेशा: ${localizedTrade}। कौशल स्तर: ${skillInfo.label}। दैनिक सांविधिक मजदूरी ₹${worker.dailyBaseWage}। कुल सत्यापित कार्य दिवस: ${
+        totalDays
+      } दिन। ${wagePhrase} कार्य स्थल: ${siteName}। हेल्पलाइन ${APP_CONFIG.CONTACT_PHONE}।`;
       speech.speak(msg, 'hi-IN');
     } else {
       const msg = `${worker.name}. Trade: ${localizedTrade}. Skill level: ${skillInfo.label}. Daily wage: ₹${worker.dailyBaseWage}. Verified days: ${
-        stats.totalDaysWorked
-      } days. Net wage balance due: ₹${stats.netBalanceDue}. Working at ${siteName}. Helpline ${APP_CONFIG.CONTACT_PHONE}.`;
+        totalDays
+      } days. ${wagePhrase} Working at ${siteName}. Helpline ${APP_CONFIG.CONTACT_PHONE}.`;
       speech.speak(msg, 'en-IN');
     }
   };
@@ -127,7 +204,7 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
 
   const handleCopyPassRecord = async () => {
     try {
-      const summaryText = `SHRAM SETU 2.0 - CERTIFIED SMART PASS\nWorker: ${worker.name} (${worker.hindiName})\nTrade: ${localizedTrade} (${skillInfo.label})\nUAN: ${worker.eShramUAN}\nBOCW: ${worker.bocwRegistrationNo}\nAadhaar UID: XXXX-XXXX-${worker.aadhaarLast4}\nDaily Base Statutory Wage: ₹${worker.dailyBaseWage}\nVerified Days: ${stats.totalDaysWorked} Days\nPayable Balance: ₹${stats.netBalanceDue}\nSite: ${siteName}\nOfficial Labour Helpline: ${APP_CONFIG.CONTACT_PHONE}`;
+      const summaryText = `WURKUP - CERTIFIED SMART PASS\nWorker: ${worker.name} (${worker.hindiName || worker.name})\nTrade: ${localizedTrade} (${skillInfo.label})\nUAN: ${worker.eShramUAN}\nBOCW: ${worker.bocwRegistrationNo}\nAadhaar UID: XXXX-XXXX-${worker.aadhaarLast4}\nDaily Base Statutory Wage: ₹${worker.dailyBaseWage}\nVerified Days: ${totalDays} Days\nPayable Balance: ₹${displayBalanceDue}\nSite: ${siteName}\nOfficial Labour Helpline: ${APP_CONFIG.CONTACT_PHONE}`;
       await navigator.clipboard.writeText(summaryText);
       setCopiedRecord(true);
       setTimeout(() => setCopiedRecord(false), 2500);
@@ -135,6 +212,17 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
       // Fallback if clipboard api is restricted
       setCopiedRecord(true);
       setTimeout(() => setCopiedRecord(false), 2500);
+    }
+  };
+
+  const handleCopyPassLink = async () => {
+    try {
+      await navigator.clipboard.writeText(buildVerifyUrl(worker.id));
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
     }
   };
 
@@ -184,14 +272,29 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
               <span>{isFlipped ? t('passFlipFront', lang) : t('passFlipBack', lang)}</span>
             </button>
 
-            {/* Speech Audio Button */}
+            {/* Speech Audio Button - Toggles to Stop Audio when playing */}
             <button
-              onClick={handleSpeakCard}
-              className="btn btn-sm shrink-0 border border-brass-200 bg-brass-50 text-brass-800 hover:bg-brass-100"
-              title={t('audioReadout', lang)}
+              type="button"
+              onClick={handleToggleSpeak}
+              className={`btn btn-sm shrink-0 transition-all cursor-pointer ${
+                isSpeaking
+                  ? 'border-rose-400 bg-rose-50 text-rose-800 hover:bg-rose-100 ring-2 ring-rose-300 font-bold'
+                  : 'border-brass-200 bg-brass-50 text-brass-800 hover:bg-brass-100'
+              }`}
+              title={isSpeaking ? (lang === 'hi' ? 'आवाज रोकें (Stop audio)' : 'Stop audio') : t('audioReadout', lang)}
+              aria-label={isSpeaking ? (lang === 'hi' ? 'आवाज रोकें' : 'Stop audio') : t('audioReadout', lang)}
             >
-              <Volume2 className="w-3.5 h-3.5 text-brass-600 shrink-0" />
-              <span>{t('audioReadout', lang)}</span>
+              {isSpeaking ? (
+                <>
+                  <Square className="w-3.5 h-3.5 fill-rose-600 text-rose-600 shrink-0 animate-pulse" />
+                  <span>{t('stopAudio', lang)}</span>
+                </>
+              ) : (
+                <>
+                  <Volume2 className="w-3.5 h-3.5 text-brass-600 shrink-0" />
+                  <span>{t('audioReadout', lang)}</span>
+                </>
+              )}
             </button>
 
             {/* Print Button */}
@@ -208,6 +311,142 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
                 {isPrinting ? (lang === 'hi' ? 'प्रिंट तैयार हो रहा है...' : 'Preparing...') : t('passPrintButton', lang)}
               </span>
             </button>
+
+            {/* More Options Dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                ref={moreOptionsBtnRef}
+                onClick={() => setShowMoreOptions((prev) => !prev)}
+                className={`btn btn-sm shrink-0 transition-colors cursor-pointer ${
+                  showMoreOptions ? 'bg-sand-200 text-ink-950 border-ink-400 font-bold' : 'btn-outline'
+                }`}
+                title={t('moreOptions', lang)}
+                aria-haspopup="true"
+                aria-expanded={showMoreOptions}
+              >
+                <MoreVertical className="w-3.5 h-3.5 text-ink-700 shrink-0" />
+                <span className="hidden sm:inline">{t('moreOptions', lang)}</span>
+              </button>
+
+              {showMoreOptions && (
+                <div
+                  ref={moreOptionsMenuRef}
+                  className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-sand-200 bg-white p-2 shadow-xl z-40 animate-fade-in text-xs space-y-1"
+                  role="menu"
+                >
+                  {/* Option: Rate Worker */}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setShowMoreOptions(false);
+                      setShowRatingModal(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-ink-800 hover:bg-brass-50 hover:text-brass-950 transition-colors text-left cursor-pointer group"
+                  >
+                    <div className="p-1.5 rounded-lg bg-brass-100 text-brass-700 group-hover:bg-brass-200 shrink-0">
+                      <Star className="w-4 h-4 fill-brass-500 text-brass-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-ink-900">{t('rateArtisan', lang)}</div>
+                      <div className="text-[10.5px] text-ink-500 truncate">{bi(lang, 'Add verified shift rating', 'हुनर, सुरक्षा व हाजिरी को रेटिंग दें')}</div>
+                    </div>
+                  </button>
+
+                  {/* Option: Share Pass Link */}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      handleCopyPassLink();
+                      setShowMoreOptions(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-ink-800 hover:bg-forest-50 hover:text-forest-950 transition-colors text-left cursor-pointer group"
+                  >
+                    <div className="p-1.5 rounded-lg bg-forest-100 text-forest-700 group-hover:bg-forest-200 shrink-0">
+                      {copiedLink ? <Check className="w-4 h-4 text-forest-700" /> : <Share2 className="w-4 h-4" />}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-ink-900">{copiedLink ? t('passLinkCopied', lang) : t('sharePass', lang)}</div>
+                      <div className="text-[10.5px] text-ink-500 truncate">{bi(lang, 'Copy zero-PII verification link', 'सुरक्षित सत्यापन लिंक कॉपी करें')}</div>
+                    </div>
+                  </button>
+
+                  {/* Option: Download vCard */}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      downloadWorkerVCard(worker);
+                      setShowMoreOptions(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-ink-800 hover:bg-sand-100 hover:text-ink-950 transition-colors text-left cursor-pointer group"
+                  >
+                    <div className="p-1.5 rounded-lg bg-sand-200 text-ink-700 group-hover:bg-sand-300 shrink-0">
+                      <Download className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-ink-900">{t('downloadVCard', lang)}</div>
+                      <div className="text-[10.5px] text-ink-500 truncate">{bi(lang, 'Save contact to phone (vCard)', 'मोबाइल में संपर्क सुरक्षित करें')}</div>
+                    </div>
+                  </button>
+
+                  {/* Option: Export JSON Work Passport */}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      exportWorkerJsonPassport(worker, stats);
+                      setShowMoreOptions(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-ink-800 hover:bg-sand-100 hover:text-ink-950 transition-colors text-left cursor-pointer group"
+                  >
+                    <div className="p-1.5 rounded-lg bg-sand-200 text-ink-700 group-hover:bg-sand-300 shrink-0">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-ink-900">{t('exportJson', lang)}</div>
+                      <div className="text-[10.5px] text-ink-500 truncate">{bi(lang, 'Cryptographic audit passport JSON', 'डिजिटल कार्य पासपोर्ट फ़ाइल')}</div>
+                    </div>
+                  </button>
+
+                  <div className="border-t border-sand-200 my-1 pt-1" />
+
+                  {/* Option: Emergency Call */}
+                  <a
+                    href={`tel:${worker.emergencyContact.phone}`}
+                    role="menuitem"
+                    onClick={() => setShowMoreOptions(false)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-rose-800 hover:bg-rose-50 transition-colors text-left cursor-pointer group"
+                  >
+                    <div className="p-1.5 rounded-lg bg-rose-100 text-rose-700 group-hover:bg-rose-200 shrink-0">
+                      <Phone className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-rose-900">{t('callEmergency', lang)}</div>
+                      <div className="text-[10px] text-rose-600 font-mono truncate">{worker.emergencyContact.name}: {worker.emergencyContact.phone}</div>
+                    </div>
+                  </a>
+
+                  {/* Option: DLO Helpline Call */}
+                  <a
+                    href={`tel:${APP_CONFIG.CONTACT_PHONE}`}
+                    role="menuitem"
+                    onClick={() => setShowMoreOptions(false)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-forest-800 hover:bg-forest-50 transition-colors text-left cursor-pointer group"
+                  >
+                    <div className="p-1.5 rounded-lg bg-forest-100 text-forest-700 group-hover:bg-forest-200 shrink-0">
+                      <PhoneCall className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-forest-900">{t('callDloHelpline', lang)}</div>
+                      <div className="text-[10px] text-forest-600 font-mono truncate">{APP_CONFIG.CONTACT_PHONE} (0731)</div>
+                    </div>
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -215,23 +454,41 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
       {/* Center Card Display Area (Screen Only - Hidden during print) */}
       <div className="no-print flex flex-col lg:flex-row gap-6 items-start w-full">
         
-        {/* The Physical Card Simulation */}
+        {/* The Physical Card Simulation - Clickable to flip as promised by hint */}
         <div className="w-full max-w-[480px] lg:w-[450px] xl:w-[480px] shrink-0 mx-auto perspective-1000 min-w-0">
           <div 
-            className={`relative w-full rounded-2xl shadow-xl transition-all duration-500 overflow-hidden border border-ink-300 bg-white min-h-[310px] ${
+            onClick={() => setIsFlipped((prev) => !prev)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setIsFlipped((prev) => !prev);
+              }
+            }}
+            tabIndex={0}
+            role="button"
+            aria-label={isFlipped ? t('passFlipFront', lang) : t('passFlipBack', lang)}
+            className={`relative w-full rounded-2xl shadow-xl transition-all duration-500 overflow-hidden border border-ink-300 bg-white min-h-[310px] cursor-pointer hover:shadow-2xl select-none group focus:outline-none focus:ring-2 focus:ring-brass-500 ${
               isFlipped ? 'ring-2 ring-brass-500' : ''
             }`}
           >
+            {/* Visual Flip Indicator Badge */}
+            <div 
+              className="absolute top-2 right-2 z-10 opacity-70 group-hover:opacity-100 transition-opacity bg-black/40 hover:bg-black/60 text-white rounded-full p-1 backdrop-blur-xs text-[10px] flex items-center gap-1 px-2"
+              title={t('passFlipCard', lang)}
+            >
+              <RotateCw className="w-2.5 h-2.5" />
+              <span className="text-[9px] font-semibold">{isFlipped ? (lang === 'hi' ? 'सामने' : 'Front') : (lang === 'hi' ? 'पलटें' : 'Flip')}</span>
+            </div>
             
             {/* FRONT OF CARD */}
             {!isFlipped ? (
               <div className="p-3.5 sm:p-5 flex flex-col justify-between h-full bg-gradient-to-br from-sand-50 via-white to-brass-50/40 min-w-0">
                 
-                {/* Card Header Strip: Government & Shram Setu branding */}
+                {/* Card Header Strip: Government & WurkUp branding */}
                 <div className="border-b border-sand-200 pb-2.5 sm:pb-3 flex items-center justify-between gap-2 min-w-0">
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="w-6 h-6 sm:w-7 sm:h-7 rounded bg-brass-600 text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
-                      {lang === 'hi' ? 'श्र' : 'SS'}
+                      WU
                     </div>
                     <div className="min-w-0">
                       <div className="text-[11px] sm:text-[12px] font-black tracking-wide text-ink-900 uppercase truncate">
@@ -305,10 +562,23 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
                       </span>
                     </div>
 
-                    <div className="pt-0.5 flex items-center gap-1">
+                    <div className="pt-0.5 flex items-center gap-1.5 flex-wrap">
                       <span className={`text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.5 rounded border truncate ${skillInfo.color}`}>
                         {skillInfo.label}
                       </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowRatingModal(true);
+                        }}
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-brass-100/90 border border-brass-300 text-brass-900 text-[9px] sm:text-[10px] font-bold hover:bg-brass-200 transition-colors cursor-pointer"
+                        title={t('rateArtisan', lang)}
+                      >
+                        <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-brass-500 text-brass-500 shrink-0" />
+                        <span>{ratingSummary.average.toFixed(1)}</span>
+                        <span className="text-[8px] sm:text-[9px] text-brass-700 font-normal">({ratingSummary.totalReviews})</span>
+                      </button>
                     </div>
 
                     <div className="pt-0.5 text-[10px] sm:text-[11px] text-ink-700 font-mono">
@@ -322,7 +592,10 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
                   {/* QR Code Container */}
                   <div className="col-span-3 flex flex-col items-center justify-center text-center">
                     <button 
-                      onClick={() => setShowQrModal(true)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowQrModal(true);
+                      }}
                       className="p-1 sm:p-1.5 bg-white rounded-lg border border-ink-300 shadow-xs hover:border-brass-500 transition-colors cursor-pointer group"
                       title={t('passCardScanPrompt', lang)}
                     >
@@ -412,6 +685,39 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
                     <span className="text-ink-400 text-[10px] block mt-0.5 truncate">
                       {t('passCardContractorLabel', lang)} {site?.contractorName || 'Registered Civil Contractor'}
                     </span>
+                  </div>
+
+                  {/* Verified Artisan Rating Badge on Card Back */}
+                  <div className="bg-ink-800/80 p-2 rounded-lg border border-ink-700 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className="text-[10px] text-brass-400 font-semibold uppercase block">
+                        {t('workerRating', lang)}
+                      </span>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star
+                            key={s}
+                            className={`w-3 h-3 ${
+                              Math.round(ratingSummary.average) >= s
+                                ? 'fill-brass-400 text-brass-400'
+                                : 'text-ink-600'
+                            }`}
+                          />
+                        ))}
+                        <span className="text-xs font-bold text-white font-mono ml-1">{ratingSummary.average.toFixed(1)}</span>
+                        <span className="text-[9px] text-ink-400 truncate">({ratingSummary.totalReviews} {lang === 'hi' ? 'समीक्षाएँ' : 'reviews'})</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowRatingModal(true);
+                      }}
+                      className="px-2 py-1 bg-brass-500/20 hover:bg-brass-500/30 text-brass-300 border border-brass-500/40 rounded text-[9px] sm:text-[10px] font-bold transition-colors cursor-pointer shrink-0"
+                    >
+                      {t('rateArtisan', lang)}
+                    </button>
                   </div>
 
                 </div>
@@ -656,14 +962,14 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
               <div className="border-b-2 border-ink-900 pb-3 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
                   <div className="w-10 h-10 rounded-lg bg-brass-600 text-white flex items-center justify-center font-black text-lg shadow-xs shrink-0">
-                    {lang === 'hi' ? 'श्र' : 'SS'}
+                    WU
                   </div>
                   <div>
                     <div className="text-[9px] font-bold uppercase tracking-widest text-brass-700">
                       {lang === 'hi' ? 'मध्य प्रदेश शासन · श्रम कल्याण प्रभाग' : 'GOVT. OF MADHYA PRADESH · LABOUR WELFARE DIVISION'}
                     </div>
                     <div className="text-base font-black text-ink-950 leading-tight">
-                      {lang === 'hi' ? 'स्मार्ट श्रम कार्ड एवं कामगार पहचान पत्र' : 'SMART SHRAM PASS & LABOUR IDENTITY CARD'}
+                      {lang === 'hi' ? 'स्मार्ट वर्क कार्ड एवं कामगार पहचान पत्र' : 'SMART WORK PASS & LABOUR IDENTITY CARD'}
                     </div>
                   </div>
                 </div>
@@ -678,7 +984,7 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
               {/* Dual-Sided Physical Card Preview */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold text-ink-700 uppercase tracking-wider">
-                  <span>{lang === 'hi' ? 'स्मार्ट श्रम कार्ड (द्विपक्षीय भौतिक पास)' : 'OFFICIAL SMART SHRAM CARD (FRONT & BACK)'}</span>
+                  <span>{lang === 'hi' ? 'स्मार्ट वर्क कार्ड (द्विपक्षीय भौतिक पास)' : 'OFFICIAL SMART WORK CARD (FRONT & BACK)'}</span>
                   <span className="text-[10px] font-normal text-ink-500">
                     {lang === 'hi' ? '✂ कार्ड धारक में रखने हेतु यहाँ से काटें या मोड़ें' : '✂ Cut or fold along border for wallet card holder'}
                   </span>
@@ -690,7 +996,7 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
                     <div className="border-b border-ink-300 pb-1.5 flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <div className="w-5 h-5 rounded bg-brass-600 text-white flex items-center justify-center font-bold text-[10px]">
-                          {lang === 'hi' ? 'श्र' : 'SS'}
+                          WU
                         </div>
                         <span className="text-[10px] font-black uppercase text-ink-900 tracking-wide">
                           {t('passCardTopTitle', lang)}
@@ -840,7 +1146,7 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
                   <span>WhatsApp: <strong className="font-mono">+{APP_CONFIG.WHATSAPP_NUMBER}</strong></span>
                 </div>
                 <div className="font-mono text-[9px] text-ink-500">
-                  Shram Setu 2.0 · Senior Bal Vigyan Indore Innovation
+                  WurkUp · Senior Bal Vigyan Indore Innovation
                 </div>
               </div>
 
@@ -887,14 +1193,14 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
           <div className="border-b-2 border-ink-900 pb-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-lg bg-brass-600 text-white flex items-center justify-center font-black text-xl shadow-xs shrink-0">
-                {lang === 'hi' ? 'श्र' : 'SS'}
+                WU
               </div>
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-widest text-brass-700">
                   {lang === 'hi' ? 'मध्य प्रदेश शासन · श्रम कल्याण प्रभाग' : 'GOVT. OF MADHYA PRADESH · LABOUR WELFARE DIVISION'}
                 </div>
                 <h1 className="text-lg font-black text-ink-950 tracking-tight leading-tight">
-                  {lang === 'hi' ? 'स्मार्ट श्रम कार्ड एवं सत्यापित कामगार पहचान पत्र' : 'SMART SHRAM PASS & VERIFIED LABOUR IDENTITY'}
+                  {lang === 'hi' ? 'स्मार्ट वर्क कार्ड एवं सत्यापित कामगार पहचान पत्र' : 'SMART WORK PASS & VERIFIED LABOUR IDENTITY'}
                 </h1>
                 <p className="text-[11px] text-ink-600 font-medium">
                   {lang === 'hi'
@@ -919,7 +1225,7 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
           {/* Dual-Sided Card Simulation (Side-by-Side for Direct Lamination / Folding) */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs font-bold text-ink-700 uppercase tracking-wider">
-              <span>{lang === 'hi' ? 'स्मार्ट श्रम कार्ड (द्विपक्षीय भौतिक पास)' : 'OFFICIAL SMART SHRAM CARD (FRONT & BACK)'}</span>
+              <span>{lang === 'hi' ? 'स्मार्ट वर्क कार्ड (द्विपक्षीय भौतिक पास)' : 'OFFICIAL SMART WORK CARD (FRONT & BACK)'}</span>
               <span className="text-[10px] font-normal text-ink-500">
                 {lang === 'hi' ? '✂ कार्ड धारक में रखने हेतु यहाँ से काटें या मोड़ें' : '✂ Cut or fold along border for wallet card holder'}
               </span>
@@ -933,7 +1239,7 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
                 <div className="border-b border-ink-300 pb-1.5 flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <div className="w-5 h-5 rounded bg-brass-600 text-white flex items-center justify-center font-bold text-[10px]">
-                      {lang === 'hi' ? 'श्र' : 'SS'}
+                      WU
                     </div>
                     <span className="text-[10px] font-black uppercase text-ink-900 tracking-wide">
                       {t('passCardTopTitle', lang)}
@@ -1072,7 +1378,7 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
           <div className="border border-ink-300 rounded-xl p-4 bg-sand-50 space-y-3">
             <div className="flex items-center justify-between border-b border-sand-200 pb-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-ink-900">
-                {lang === 'hi' ? 'सत्यापित कार्य एवं मजदूरी सारांश (श्रम सेतु रिकॉर्ड)' : 'VERIFIED MUSTER & STATUTORY WAGE RECORD (SHRAM SETU)'}
+                {lang === 'hi' ? 'सत्यापित कार्य एवं मजदूरी सारांश (WurkUp रिकॉर्ड)' : 'VERIFIED MUSTER & STATUTORY WAGE RECORD (WURKUP)'}
               </h3>
               <span className="text-[10px] font-mono text-ink-500">
                 Section 20, Minimum Wages Act 1948
@@ -1129,12 +1435,23 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
               <span>WhatsApp: <strong className="font-mono">+{APP_CONFIG.WHATSAPP_NUMBER}</strong></span>
             </div>
             <div className="text-right font-mono text-[9px] text-ink-500">
-              Shram Setu 2.0 · Senior Bal Vigyan Indore Innovation · MP BOCW Aligned
+              WurkUp · Senior Bal Vigyan Indore Innovation · MP BOCW Aligned
             </div>
           </div>
 
         </div>
       </div>
+
+      {/* Interactive Worker Star Rating Modal */}
+      <WorkerRatingModal
+        worker={worker}
+        lang={lang}
+        isOpen={showRatingModal}
+        onClose={() => setShowRatingModal(false)}
+        onRatingAdded={(_review) => {
+          setRatingSummary(db.getWorkerRatingSummary(worker.id));
+        }}
+      />
 
     </div>
   );

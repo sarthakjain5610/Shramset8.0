@@ -1,5 +1,5 @@
 /**
- * Shram Setu 2.0 — Genuine IndexedDB Storage Service
+ * WurkUp — Genuine IndexedDB Storage Service
  * Native browser IndexedDB persistence with versioned stores, transactions,
  * safe localStorage migration, and strict isolation between real and demo datasets.
  */

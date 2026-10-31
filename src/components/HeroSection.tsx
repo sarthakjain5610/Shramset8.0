@@ -1,5 +1,5 @@
-import React from 'react';
-import { Shield, QrCode, CheckCircle2, Volume2, ArrowRight, Sparkles } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Shield, QrCode, CheckCircle2, Volume2, Square, ArrowRight, Sparkles } from 'lucide-react';
 import { Language, t } from '../services/i18n';
 import { speech } from '../services/speech';
 
@@ -18,15 +18,28 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onNavigateTab,
   onNewWorkerClick,
 }) => {
+  const [isSpeaking, setIsSpeaking] = useState(speech.getIsSpeaking());
+
+  useEffect(() => {
+    return speech.subscribe((speaking) => {
+      setIsSpeaking(speaking);
+    });
+  }, []);
+
   const handleSpeakOverview = () => {
+    if (isSpeaking) {
+      speech.stop();
+      return;
+    }
+
     if (lang === 'hi') {
       speech.speak(
-        'श्रम सेतु 2.0 असंगठित एवं दैनिक वेतन भोगी श्रमिकों के अधिकारों की रक्षा करता है। यह डिजिटल क्यूआर पास, जीपीएस आधारित हाजिरी और न्यूनतम मजदूरी की गारंटी सुनिश्चित करता है।',
+        'WurkUp असंगठित एवं दैनिक वेतन भोगी श्रमिकों के अधिकारों की रक्षा करता है। यह डिजिटल क्यूआर पास, जीपीएस आधारित हाजिरी और न्यूनतम मजदूरी की गारंटी सुनिश्चित करता है।',
         'hi-IN'
       );
     } else {
       speech.speak(
-        'Shram Setu 2.0 secures verified daily work records, geofenced attendance, and statutory minimum wage protection for informal construction and daily-wage laborers.',
+        'WurkUp secures verified daily work records, geofenced attendance, and statutory minimum wage protection for informal construction and daily-wage laborers.',
         'en-IN'
       );
     }
@@ -73,10 +86,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </p>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            <button onClick={() => onNavigateTab('attendance')} className="btn btn-gold btn-sm">
-              <QrCode className="h-3.5 w-3.5" />
+            <button onClick={() => onNavigateTab('pass')} className="btn btn-gold btn-sm">
+              <Shield className="h-3.5 w-3.5" />
+              {t('navPass', lang)}
+            </button>
+
+            <button
+              onClick={() => onNavigateTab('attendance')}
+              className="btn btn-sm border border-white/15 bg-white/[0.06] text-white hover:bg-white/[0.12]"
+            >
+              <QrCode className="h-3.5 w-3.5 text-brass-300" />
               {t('heroMarkAttendance', lang)}
-              <ArrowRight className="h-3.5 w-3.5" />
             </button>
 
             <button
@@ -88,11 +108,25 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
             <button
               onClick={handleSpeakOverview}
-              className="btn btn-sm border border-white/10 bg-transparent text-brass-200 hover:bg-white/[0.08]"
-              title={t('listenAudio', lang)}
+              className={`btn btn-sm transition-all duration-200 cursor-pointer ${
+                isSpeaking
+                  ? 'border-rose-400/80 bg-rose-500/20 text-rose-200 ring-1 ring-rose-400/40 hover:bg-rose-500/30'
+                  : 'border border-white/10 bg-transparent text-brass-200 hover:bg-white/[0.08]'
+              }`}
+              title={isSpeaking ? t('stopAudio', lang) : t('listenAudio', lang)}
+              aria-label={isSpeaking ? t('stopAudio', lang) : t('listenAudio', lang)}
             >
-              <Volume2 className="h-3.5 w-3.5" />
-              {t('listenAudio', lang)}
+              {isSpeaking ? (
+                <>
+                  <Square className="h-3.5 w-3.5 fill-current animate-pulse text-rose-300" />
+                  <span className="font-semibold text-rose-200">{t('stopAudio', lang)}</span>
+                </>
+              ) : (
+                <>
+                  <Volume2 className="h-3.5 w-3.5" />
+                  <span>{t('listenAudio', lang)}</span>
+                </>
+              )}
             </button>
 
             <button

@@ -49,14 +49,18 @@ export const ContactVerificationModal: React.FC<ContactVerificationModalProps> =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-900/60 backdrop-blur-xs no-print">
+    <div 
+      className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-3 sm:p-4 bg-ink-950/75 backdrop-blur-sm no-print"
+      onClick={onClose}
+    >
       <div 
         role="dialog" 
         aria-modal="true"
-        className="bg-white rounded-2xl max-w-lg w-full border border-sand-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+        onClick={(e) => e.stopPropagation()}
+        className="my-auto relative max-h-[min(90vh,620px)] flex flex-col bg-white rounded-2xl max-w-lg w-full border border-sand-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
       >
         {/* Header */}
-        <div className="px-6 py-4 bg-ink-900 text-white flex items-center justify-between">
+        <div className="px-6 py-4 bg-ink-900 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-forest-600 flex items-center justify-center text-white shrink-0">
               <Phone className="w-4 h-4" />
@@ -84,7 +88,7 @@ export const ContactVerificationModal: React.FC<ContactVerificationModalProps> =
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
           <div className="bg-sand-50 p-3.5 rounded-xl border border-sand-200 space-y-1.5 text-xs">
             <div className="flex justify-between">
               <span className="text-ink-500">Contact Target:</span>

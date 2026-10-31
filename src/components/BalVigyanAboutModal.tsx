@@ -36,7 +36,7 @@ export const BalVigyanAboutModal: React.FC<BalVigyanAboutModalProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `shramsetu_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `wurkup_backup_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
     setCopiedBackup(true);
@@ -57,7 +57,7 @@ export const BalVigyanAboutModal: React.FC<BalVigyanAboutModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-ink-950/60 p-4 backdrop-blur-sm animate-fade-up"
+      className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-ink-950/75 p-3 sm:p-4 md:p-6 backdrop-blur-sm animate-fade-up no-print"
       onClick={onClose}
     >
       <div

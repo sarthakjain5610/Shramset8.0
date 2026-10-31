@@ -43,7 +43,7 @@ const STEPS = [
   {
     num: '03',
     title: 'The site scans the pass',
-    desc: 'The contractor scans the pass with a phone camera. Instead of silently writing a muster entry, Shram Setu creates a pending approval request on the worker’s account.',
+    desc: 'The contractor scans the pass with a phone camera. Instead of silently writing a muster entry, WurkUp creates a pending approval request on the worker’s account.',
     detail: 'Geofence radius and site ID captured',
     icon: Smartphone,
   },
@@ -163,7 +163,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, lang }) => {
       <section className="mt-20">
         <SectionHeading
           eyebrow="Honest boundaries"
-          title="What Shram Setu deliberately does not do"
+          title="What WurkUp deliberately does not do"
           description="A tool people trust should be explicit about its limits. These are enforced design decisions, not roadmap gaps."
         />
 
@@ -188,7 +188,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, lang }) => {
           <div className="mt-6 flex items-start gap-3 rounded-2xl border border-brass-200 bg-brass-50/70 p-4">
             <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-brass-700" />
             <p className="text-[11.5px] leading-relaxed text-brass-900">
-              <strong className="font-bold">Shram Setu is not a government portal.</strong> It is an
+              <strong className="font-bold">WurkUp is not a government portal.</strong> It is an
               independent transparency project built to align with MP labour statutes and e-Shram /
               BOCW workflows. It does not replace statutory registration, and it does not verify
               identity.

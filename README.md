@@ -1,8 +1,8 @@
-# Shram Setu 2.0
+# WurkUp
 
 **Verified digital work & wage records for India's informal workforce.**
 
-Shram Setu gives daily-wage and construction workers a tamper-evident record of every
+WurkUp gives daily-wage and construction workers a tamper-evident record of every
 shift: a reusable QR pass that carries no personal data, a statutory wage ledger computed
 in integer paise, a mutually approved muster roll, and a SHA-256 chained audit trail that
 both worker and contractor can verify.

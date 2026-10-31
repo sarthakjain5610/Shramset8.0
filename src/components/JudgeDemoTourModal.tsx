@@ -137,7 +137,7 @@ export const JudgeDemoTourModal: React.FC<JudgeDemoTourModalProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `shram-setu-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `wurkup-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -164,7 +164,7 @@ export const JudgeDemoTourModal: React.FC<JudgeDemoTourModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-ink-950/70 p-3 backdrop-blur-sm sm:p-5 animate-fade-up"
+      className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-ink-950/75 p-3 backdrop-blur-sm sm:p-5 animate-fade-up no-print"
       onClick={onClose}
     >
       <div
@@ -187,7 +187,7 @@ export const JudgeDemoTourModal: React.FC<JudgeDemoTourModalProps> = ({
                 {lang === 'hi' ? 'जज डेमो टूर एवं सुरक्षा ऑडिट बेंच' : "Judges' Tour & Audit Test Bench"}
               </h2>
               <span className="text-[11px] text-brass-300 font-medium block">
-                Shram Setu 2.0 · Verified Architecture & Anomaly Controls
+                WurkUp · Verified Architecture & Anomaly Controls
               </span>
             </div>
           </div>
@@ -410,7 +410,7 @@ export const JudgeDemoTourModal: React.FC<JudgeDemoTourModalProps> = ({
                   <span>Safe Reset & Demonstration Isolation</span>
                 </div>
                 <p className="text-[11px] text-brass-900">
-                  To protect real records, Shram Setu isolates demonstration data. You can choose whether to reset only the sample seed data or perform a complete factory wipe.
+                  To protect real records, WurkUp isolates demonstration data. You can choose whether to reset only the sample seed data or perform a complete factory wipe.
                 </p>
 
                 <div className="space-y-1.5 pt-1">

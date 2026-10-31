@@ -1,5 +1,5 @@
 /**
- * Centralized Typed Translation System for Shram Setu 2.0
+ * Centralized Typed Translation System for WurkUp
  * Provides 100% complete bilingual support (English & Hindi) without mixed-language artifacts.
  */
 
@@ -38,9 +38,9 @@ export function saveLanguage(lang: Language): void {
 export const translations = {
   en: {
     // Brand & Header
-    brandName: 'Shram Setu',
+    brandName: 'WurkUp',
     brandSubtitle: 'Verified Digital Work & Wage Records',
-    navPass: 'Smart Shram Pass',
+    navPass: 'Smart Work Pass',
     navAttendance: 'Muster & Attendance',
     navLedger: 'Wage Khata',
     navContractor: 'Contractor Portal',
@@ -75,7 +75,7 @@ export const translations = {
     heroCardSubtext: 'Head Mason · Indore Metro Package 3',
 
     // Smart Shram Pass Screen
-    passHeaderTitle: 'Smart Shram Card & Digital Pass',
+    passHeaderTitle: 'Smart Work Card & Digital Pass',
     passActiveBadge: 'Active & Verified',
     passSubheader: 'Directly linked with MP BOCW Board and National e-Shram Registry',
     passFlipFront: 'View Front',
@@ -83,7 +83,7 @@ export const translations = {
     passFlipCard: 'Flip Card',
     passPrintButton: 'Print Pass',
     passCardTopGovt: 'Govt. of Madhya Pradesh · Labour Welfare Division',
-    passCardTopTitle: 'SHRAM SETU · SMART WORK PASS',
+    passCardTopTitle: 'WURKUP · SMART WORK PASS',
     passCardIdPrefix: 'ID',
     passCardEShramLinked: 'e-Shram Linked',
     passCardUidPrefix: 'UID',
@@ -225,7 +225,7 @@ export const translations = {
     modalAdvanceSave: 'Save Transaction',
 
     // WhatsApp Wage Slip Text (in English)
-    whatsappSlipHeader: 'SHRAM SETU 2.0 · VERIFIED DIGITAL WAGE SLIP',
+    whatsappSlipHeader: 'WURKUP · VERIFIED DIGITAL WAGE SLIP',
     whatsappWorkerLabel: 'Worker:',
     whatsappTradeLabel: 'Trade:',
     whatsappUanLabel: 'e-Shram UAN:',
@@ -333,10 +333,10 @@ export const translations = {
     workerModalEmergencyPhone: 'Emergency Phone',
     workerModalDeploySite: 'Initial Deployment Site',
     workerModalCancel: 'Cancel',
-    workerModalSubmit: 'Issue Smart Shram Pass',
+    workerModalSubmit: 'Issue Smart Work Pass',
 
     // Bal Vigyan Innovation Exhibit Modal
-    balVigyanModalTitle: 'Senior Bal Vigyan Innovation Exhibit · Shram Setu 2.0',
+    balVigyanModalTitle: 'Senior Bal Vigyan Innovation Exhibit · WurkUp',
     balVigyanModalSub: 'Developed in Indore, Madhya Pradesh · Civic-Tech for 450M+ Unorganised Workers',
     balVigyanGenesisTitle: 'The Genesis & Core Problem:',
     balVigyanGenesisBody: 'In India, informal daily-wage construction laborers, masons, and helpers face chronic wage theft, arbitrary pay cuts, missing overtime records, and lack of proof of work. Because attendance registers (muster rolls) are held exclusively by labor contractors (पेटी ठेकेदार), workers have zero evidence when disputes arise.',
@@ -358,20 +358,50 @@ export const translations = {
     balVigyanHelplineContact: 'Project Inquiry & Bal Vigyan Mentorship Helpline:',
 
     // Footer
-    footerTitle: 'Shram Setu 2.0',
+    footerTitle: 'WurkUp',
     footerInnovation: 'Senior Bal Vigyan Gold Innovation (Indore, MP)',
     footerCompliance: 'Section 20 MW Act 1948 Compliant',
     footerExhibitBtn: 'Bal Vigyan Exhibit',
     footerResetBtn: 'Reset Prototype Data',
     footerDemoMode: 'IndexedDB Local Demo',
     footerHelplineLabel: 'Official Support & Helpline:',
+
+    // Star Rating & Worker Profile Enhancements
+    starRating: 'Star Rating',
+    workerRating: 'Artisan Rating',
+    verifiedReviews: 'Verified Site Reviews',
+    craftsmanship: 'Craftsmanship & Skill',
+    punctuality: 'Punctuality & Discipline',
+    safetyCompliance: 'Safety & PPE Compliance',
+    rateArtisan: 'Rate Worker',
+    rateWorkerTitle: 'Rate Worker Performance',
+    moreOptions: 'More Options',
+    sharePass: 'Share Pass Link',
+    passLinkCopied: 'Pass link copied to clipboard!',
+    downloadVCard: 'Download Contact (vCard)',
+    exportJson: 'Export Digital Work Passport (JSON)',
+    callDloHelpline: 'Call Indore DLO Helpline',
+    callEmergency: 'Call Emergency Contact',
+    raiseDisputeAction: 'Report Wage Dispute',
+    toggleVoice: 'Voice Readout',
+    viewRatingsReviews: 'View Reviews',
+    submitReview: 'Submit Rating',
+    reviewSubmitted: 'Rating successfully recorded on cryptographic chain!',
+    raterRoleContractor: 'Registered Contractor',
+    raterRoleSupervisor: 'Site Supervisor',
+    raterRoleEngineer: 'Civil Engineer',
+    raterRolePeer: 'Senior Artisan / Peer',
+    feedbackPlaceholder: 'Add feedback regarding work quality, tool handling, and attendance...',
+    noReviewsYet: 'No reviews recorded yet.',
+    overallRating: 'Overall Rating',
+    ratingScaleHelp: 'Ratings are cryptographically signed to build worker creditworthiness.',
   },
 
   hi: {
     // Brand & Header
-    brandName: 'श्रम सेतु',
+    brandName: 'WurkUp',
     brandSubtitle: 'सत्यापित डिजिटल कार्य एवं मजदूरी रिकॉर्ड',
-    navPass: 'स्मार्ट श्रम कार्ड',
+    navPass: 'स्मार्ट वर्क कार्ड',
     navAttendance: 'हाजिरी व मस्टर',
     navLedger: 'मजदूरी खाता',
     navContractor: 'ठेकेदार पोर्टल',
@@ -406,7 +436,7 @@ export const translations = {
     heroCardSubtext: 'मुख्य राजमिस्त्री · इंदौर मेट्रो पैकेज 3',
 
     // Smart Shram Pass Screen
-    passHeaderTitle: 'स्मार्ट श्रम कार्ड व डिजिटल पास',
+    passHeaderTitle: 'स्मार्ट वर्क कार्ड व डिजिटल पास',
     passActiveBadge: 'सक्रिय एवं सत्यापित',
     passSubheader: 'म.प्र. भवन संनिर्माण कर्मकार मंडल एवं ई-श्रम राष्ट्रीय डेटाबेस से सीधे संबद्ध',
     passFlipFront: 'सामने देखें',
@@ -414,7 +444,7 @@ export const translations = {
     passFlipCard: 'कार्ड पलटें',
     passPrintButton: 'पास प्रिंट करें',
     passCardTopGovt: 'मध्य प्रदेश शासन · श्रम कल्याण प्रभाग',
-    passCardTopTitle: 'श्रम सेतु · स्मार्ट वर्क पास',
+    passCardTopTitle: 'WURKUP · स्मार्ट वर्क पास',
     passCardIdPrefix: 'आईडी',
     passCardEShramLinked: 'ई-श्रम संबद्ध',
     passCardUidPrefix: 'यूआईडी',
@@ -556,7 +586,7 @@ export const translations = {
     modalAdvanceSave: 'खाते में जोड़ें',
 
     // WhatsApp Wage Slip Text (in Hindi)
-    whatsappSlipHeader: 'श्रम सेतु 2.0 · डिजिटल मजदूरी पर्ची (WAGE SLIP)',
+    whatsappSlipHeader: 'WURKUP · डिजिटल मजदूरी पर्ची (WAGE SLIP)',
     whatsappWorkerLabel: 'कारीगर:',
     whatsappTradeLabel: 'पेशा:',
     whatsappUanLabel: 'ई-श्रम UAN:',
@@ -664,10 +694,10 @@ export const translations = {
     workerModalEmergencyPhone: 'आपातकालीन मोबाइल',
     workerModalDeploySite: 'प्रारंभिक कार्य स्थल',
     workerModalCancel: 'रद्द करें',
-    workerModalSubmit: 'स्मार्ट श्रम पास जारी करें',
+    workerModalSubmit: 'स्मार्ट वर्क पास जारी करें',
 
     // Bal Vigyan Innovation Exhibit Modal
-    balVigyanModalTitle: 'वरिष्ठ बाल विज्ञान नवाचार प्रदर्शनी · श्रम सेतु 2.0',
+    balVigyanModalTitle: 'वरिष्ठ बाल विज्ञान नवाचार प्रदर्शनी · WurkUp',
     balVigyanModalSub: 'इंदौर, मध्य प्रदेश में विकसित · 45 करोड़ असंगठित कामगारों हेतु सामाजिक नवाचार',
     balVigyanGenesisTitle: 'उद्देश्य एवं मूल समस्या:',
     balVigyanGenesisBody: 'भारत में असंगठित दैनिक वेतन भोगी निर्माण श्रमिकों, मिस्त्रियों और मजदूरों को लगातार मजदूरी चोरी, मनमानी कटौती, ओवरटाइम के इंकार और कार्य के कानूनी प्रमाण के अभाव का सामना करना पड़ता है। हाजिरी रजिस्टर (मस्टर रोल) केवल ठेकेदारों के पास होने के कारण विवाद की स्थिति में मजदूरों के पास कोई साक्ष्य नहीं होता।',
@@ -689,13 +719,43 @@ export const translations = {
     balVigyanHelplineContact: 'परियोजना संपर्क एवं बाल विज्ञान मार्गदर्शन हेल्पलाइन:',
 
     // Footer
-    footerTitle: 'श्रम सेतु 2.0',
+    footerTitle: 'WurkUp',
     footerInnovation: 'वरिष्ठ बाल विज्ञान स्वर्ण नवाचार (इंदौर, म.प्र.)',
     footerCompliance: 'धारा 20 न्यूनतम मजदूरी अधिनियम 1948 अनुसार',
     footerExhibitBtn: 'बाल विज्ञान प्रदर्शनी',
     footerResetBtn: 'डेमो डेटा रीसेट करें',
     footerDemoMode: 'IndexedDB लोकल डेमो मोड',
     footerHelplineLabel: 'आधिकारिक सहायता एवं हेल्पलाइन:',
+
+    // Star Rating & Worker Profile Enhancements
+    starRating: 'स्टार रेटिंग',
+    workerRating: 'कारीगर रेटिंग',
+    verifiedReviews: 'सत्यापित साइट समीक्षाएँ',
+    craftsmanship: 'कारीगरी व कौशल',
+    punctuality: 'समयबद्धता व अनुशासन',
+    safetyCompliance: 'सुरक्षा व पीपीई पालन',
+    rateArtisan: 'कारीगर को रेटिंग दें',
+    rateWorkerTitle: 'श्रमिक कार्य निष्पादन को रेटिंग दें',
+    moreOptions: 'अन्य विकल्प',
+    sharePass: 'पास लिंक साझा करें',
+    passLinkCopied: 'पास लिंक क्लिपबोर्ड पर कॉपी हो गया!',
+    downloadVCard: 'संपर्क कार्ड (vCard) डाउनलोड करें',
+    exportJson: 'डिजिटल कार्य पासपोर्ट (JSON) डाउनलोड करें',
+    callDloHelpline: 'इंदौर श्रम अधिकारी हेल्पलाइन को कॉल करें',
+    callEmergency: 'आपातकालीन संपर्क को कॉल करें',
+    raiseDisputeAction: 'मजदूरी विवाद दर्ज करें',
+    toggleVoice: 'आवाज में सुनें',
+    viewRatingsReviews: 'समीक्षाएं देखें',
+    submitReview: 'रेटिंग दर्ज करें',
+    reviewSubmitted: 'रेटिंग ब्लॉक रिकॉर्ड में सफलतापूर्वक दर्ज की गई!',
+    raterRoleContractor: 'पंजीकृत ठेकेदार',
+    raterRoleSupervisor: 'साइट सुपरवाइज़र',
+    raterRoleEngineer: 'सिविल इंजीनियर',
+    raterRolePeer: 'वरिष्ठ कारीगर साथी',
+    feedbackPlaceholder: 'कारीगरी गुणवत्ता, औजारों का रख-रखाव और उपस्थिति पर टिप्पणी लिखें...',
+    noReviewsYet: 'अभी तक कोई समीक्षा दर्ज नहीं की गई है।',
+    overallRating: 'समग्र रेटिंग',
+    ratingScaleHelp: 'रेटिंग श्रमिक की विश्वसनीयता बढ़ाने हेतु सुरक्षित रूप से दर्ज की जाती हैं।',
   },
 } as const;
 

@@ -1,5 +1,5 @@
 /**
- * Shram Setu 2.0 - Role-Based Authentication & Contact Verification Engine
+ * WurkUp - Role-Based Authentication & Contact Verification Engine
  * Handles user lifecycle for Workers and Contractors with Supabase Cloud Auth support
  * and an isolated, fully compliant Local Demo fallback when backend keys are unconfigured.
  * 
@@ -136,7 +136,7 @@ class AuthService {
     }
 
     if (!params.privacyAccepted) {
-      return { success: false, error: 'Consent to the Shram Setu privacy and data use terms is required.' };
+      return { success: false, error: 'Consent to the WurkUp privacy and data use terms is required.' };
     }
 
     // Try Supabase Auth if connected

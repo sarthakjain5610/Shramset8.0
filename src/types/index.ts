@@ -1,9 +1,38 @@
 /**
- * Shram Setu 2.0 - Core Domain Models & Types
+ * WurkUp - Core Domain Models & Types
  * Unified schema for local IndexedDB, wage calculation, cryptographic audit, and Supabase readiness.
  */
 
 export type SkillLevel = 'unskilled' | 'semi_skilled' | 'skilled' | 'highly_skilled';
+
+export interface WorkerReview {
+  id: string;
+  workerId: string;
+  raterName: string;
+  raterRole: 'contractor' | 'supervisor' | 'engineer' | 'peer';
+  siteName?: string;
+  rating: number; // 1 to 5
+  skillRating?: number; // 1 to 5
+  punctualityRating?: number; // 1 to 5
+  safetyRating?: number; // 1 to 5
+  comment: string;
+  date: string; // YYYY-MM-DD
+}
+
+export interface WorkerRatingSummary {
+  average: number; // e.g. 4.9
+  totalReviews: number; // e.g. 28
+  craftsmanship: number; // e.g. 4.9
+  punctuality: number; // e.g. 4.8
+  safetyCompliance: number; // e.g. 5.0
+  breakdown?: {
+    5: number;
+    4: number;
+    3: number;
+    2: number;
+    1: number;
+  };
+}
 
 export interface Worker {
   id: string;
@@ -28,6 +57,8 @@ export interface Worker {
   bankAccountLast4?: string;
   ifscCode?: string;
   upiId?: string;
+  ratingSummary?: WorkerRatingSummary;
+  reviews?: WorkerReview[];
   isDemoRecord?: boolean;
 }
 

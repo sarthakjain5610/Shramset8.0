@@ -61,10 +61,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onEnterJudgeDemo, la
             <div className="flex items-center gap-3">
               <BrandMark size="md" />
               <div>
-                <span className="font-display text-lg font-semibold text-white">Shram Setu</span>
-                <span className="ml-2 rounded-full border border-white/15 bg-white/5 px-1.5 py-0.5 align-middle text-[9px] font-bold tracking-wider text-brass-300">
-                  2.0
-                </span>
+                <span className="font-display text-lg font-semibold text-white">WurkUp</span>
                 <p className="mt-1 text-[9.5px] font-semibold uppercase tracking-[0.18em] text-sand-200/60">
                   Verified work &amp; wage records
                 </p>
@@ -196,7 +193,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onEnterJudgeDemo, la
         {/* Bottom bar */}
         <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-white/10 pt-6 text-[10.5px] text-sand-200/55 sm:flex-row sm:items-center">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <span>© {year} Shram Setu</span>
+            <span>© {year} WurkUp</span>
             <span className="text-white/15">·</span>
             <span>Senior Bal Vigyan Innovation, Indore MP</span>
             <span className="hidden text-white/15 sm:inline">·</span>

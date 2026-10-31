@@ -242,7 +242,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
       question: 'What happens when I have no network on site?',
       answer: (
         <>
-          Shram Setu is offline-first. Records are written to your device immediately and synced to
+          WurkUp is offline-first. Records are written to your device immediately and synced to
           the Supabase backend when a connection returns, so a dead zone never means a lost shift.
         </>
       ),
@@ -251,7 +251,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
       question: 'Is this an official government portal?',
       answer: (
         <>
-          Shram Setu is a Senior Bal Vigyan innovation project from Indore, built to align with MP
+          WurkUp is a Senior Bal Vigyan innovation project from Indore, built to align with MP
           labour statutes and e-Shram / BOCW workflows. It is an independent transparency tool, not a
           government service.
         </>
@@ -418,7 +418,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
               Built for both sides of a <span className="italic text-forest-700">handshake</span>
             </>
           }
-          description="Exploitation thrives on asymmetric records. Shram Setu gives workers and contractors the same immutable ledger — so neither side has to argue about what happened."
+          description="Exploitation thrives on asymmetric records. WurkUp gives workers and contractors the same immutable ledger — so neither side has to argue about what happened."
         />
 
         <div className="mt-12 grid items-stretch gap-6 md:grid-cols-2 lg:gap-8">
@@ -698,7 +698,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
             </Reveal>
             <Reveal delay={210}>
               <p className="mt-3 text-[13px] leading-relaxed text-ink-500">
-                Shram Setu replaces the contested page with a shared, signed timeline: the shift is
+                WurkUp replaces the contested page with a shared, signed timeline: the shift is
                 requested by the site, approved on the worker's phone, priced by statute, and sealed
                 in a hash chain that neither party can rewrite alone.
               </p>

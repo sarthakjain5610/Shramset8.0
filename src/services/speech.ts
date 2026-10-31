@@ -1,5 +1,5 @@
 /**
- * Audio accessibility helper for Shram Setu
+ * Audio accessibility helper for WurkUp
  * Provides text-to-speech audio narration in Hindi or Indian English
  * for daily wage laborers, masons, and helpers.
  */
@@ -8,10 +8,17 @@ class SpeechService {
   private synth: SpeechSynthesis | null = null;
   private isSpeaking: boolean = false;
   private listeners: ((speaking: boolean) => void)[] = [];
+  private currentUtterance: SpeechSynthesisUtterance | null = null;
 
   constructor() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       this.synth = window.speechSynthesis;
+      // Pre-fetch voices when ready
+      if (this.synth.onvoiceschanged !== undefined) {
+        this.synth.onvoiceschanged = () => {
+          // voices populated
+        };
+      }
     }
   }
 
@@ -25,7 +32,14 @@ class SpeechService {
 
   private notify(speaking: boolean) {
     this.isSpeaking = speaking;
-    this.listeners.forEach((cb) => cb(speaking));
+    const currentListeners = [...this.listeners];
+    for (const cb of currentListeners) {
+      try {
+        cb(speaking);
+      } catch (err) {
+        console.warn('Speech listener error:', err);
+      }
+    }
   }
 
   public speak(text: string, lang: 'hi-IN' | 'en-IN' | 'en-US' = 'hi-IN'): void {
@@ -34,20 +48,42 @@ class SpeechService {
       return;
     }
 
-    // Cancel existing speech
-    this.synth.cancel();
+    // Cancel existing speech immediately
+    try {
+      this.synth.cancel();
+    } catch {
+      // ignore
+    }
 
     const cleanText = text.replace(/[*_#]/g, '').trim();
+    if (!cleanText) {
+      this.notify(false);
+      return;
+    }
+
     const utterance = new SpeechSynthesisUtterance(cleanText);
+    // Keep reference on instance to prevent Chromium garbage collection bug
+    this.currentUtterance = utterance;
+
     utterance.rate = 0.95; // Slightly slower for clear comprehension
     utterance.pitch = 1.0;
     utterance.lang = lang;
 
     // Pick appropriate voice if available
-    const voices = this.synth.getVoices();
-    const targetVoice = voices.find((v) => v.lang.startsWith(lang.slice(0, 2)));
-    if (targetVoice) {
-      utterance.voice = targetVoice;
+    try {
+      const voices = this.synth.getVoices();
+      if (voices && voices.length > 0) {
+        const langPrefix = lang.slice(0, 2);
+        const targetVoice = voices.find((v) =>
+          v.lang.replace('_', '-').toLowerCase().startsWith(lang.toLowerCase()) ||
+          v.lang.toLowerCase().startsWith(langPrefix.toLowerCase())
+        );
+        if (targetVoice) {
+          utterance.voice = targetVoice;
+        }
+      }
+    } catch {
+      // fallback
     }
 
     utterance.onstart = () => {
@@ -55,20 +91,60 @@ class SpeechService {
     };
 
     utterance.onend = () => {
+      if (this.currentUtterance === utterance) {
+        this.currentUtterance = null;
+      }
       this.notify(false);
     };
 
-    utterance.onerror = () => {
+    utterance.onerror = (e) => {
+      if (this.currentUtterance === utterance) {
+        this.currentUtterance = null;
+      }
       this.notify(false);
     };
 
-    this.synth.speak(utterance);
+    // If synth was paused by the browser, resume it
+    if (this.synth.paused) {
+      try {
+        this.synth.resume();
+      } catch {
+        // ignore
+      }
+    }
+
+    // Small dispatch timeout avoids Chrome cancelling the newly queued utterance
+    setTimeout(() => {
+      if (this.synth && this.currentUtterance === utterance) {
+        try {
+          this.synth.speak(utterance);
+          this.notify(true);
+        } catch (err) {
+          console.warn('SpeechSynthesis speak failed:', err);
+          this.currentUtterance = null;
+          this.notify(false);
+        }
+      }
+    }, 15);
   }
 
   public stop(): void {
     if (this.synth) {
-      this.synth.cancel();
-      this.notify(false);
+      try {
+        this.synth.cancel();
+      } catch (err) {
+        console.warn('SpeechSynthesis cancel error:', err);
+      }
+    }
+    this.currentUtterance = null;
+    this.notify(false);
+  }
+
+  public toggle(text: string, lang: 'hi-IN' | 'en-IN' | 'en-US' = 'hi-IN'): void {
+    if (this.isSpeaking) {
+      this.stop();
+    } else {
+      this.speak(text, lang);
     }
   }
 

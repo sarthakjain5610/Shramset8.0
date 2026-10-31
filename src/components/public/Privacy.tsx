@@ -38,7 +38,7 @@ const SECTIONS = [
     body: (
       <>
         <p>
-          Shram Setu guarantees that no personally identifiable information is encoded directly into
+          WurkUp guarantees that no personally identifiable information is encoded directly into
           a worker QR pass. The code encodes exclusively an opaque, unguessable token that resolves to
           a record on the host network.
         </p>
@@ -156,7 +156,7 @@ export const Privacy: React.FC<PrivacyProps> = ({ onNavigate, lang }) => {
         eyebrow="Informal worker privacy framework"
         icon={<ShieldCheck className="h-5 w-5" />}
         title="Privacy and data use, in plain language"
-        description="Written to be read by the person it protects — not only by a lawyer. Effective for Shram Setu 2.0 · Senior Bal Vigyan Indore Innovation."
+        description="Written to be read by the person it protects — not only by a lawyer. Effective for WurkUp · Senior Bal Vigyan Indore Innovation."
       >
         <div className="flex flex-wrap gap-2">
           {[

@@ -1,7 +1,7 @@
 /**
- * Automated Test Suite for Shram Setu 2.0
+ * Automated Test Suite for WurkUp
  * Verifies bilingual dictionary, language switching, contact numbers,
- * Smart Shram Pass formatting, wage calculations, and local demo mode.
+ * Smart Work Pass formatting, wage calculations, and local demo mode.
  */
 
 import { translations, t, formatCurrency, getLocalizedTrade, getLocalizedSkill, Language } from '../src/services/i18n';
@@ -27,7 +27,7 @@ function assert(condition: boolean, testName: string, details?: string) {
   }
 }
 
-console.log('\n=== SHRAM SETU 2.0 AUTOMATED TEST BENCH ===\n');
+console.log('\n=== WURKUP AUTOMATED TEST BENCH ===\n');
 
 // TEST SUITE 1: Translation Dictionary Integrity & Completeness
 console.log('1. Testing Translation System Integrity:');

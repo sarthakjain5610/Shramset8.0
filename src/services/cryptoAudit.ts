@@ -1,5 +1,5 @@
 /**
- * Shram Setu 2.0 — Cryptographic Audit Engine
+ * WurkUp — Cryptographic Audit Engine
  * Uses standard Web Crypto SHA-256 digests and canonical serialization to verify
  * work records, payment acknowledgments, and dispute events.
  */

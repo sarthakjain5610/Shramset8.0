@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   CreditCard, 
   ArrowUpRight, 
@@ -6,6 +6,7 @@ import {
   PlusCircle, 
   Share2, 
   Volume2, 
+  Square,
   Search, 
   CheckCircle2,
   Clock,
@@ -51,6 +52,13 @@ export const WageProtectionLedger: React.FC<WageProtectionLedgerProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [copiedSlip, setCopiedSlip] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(speech.getIsSpeaking());
+
+  useEffect(() => {
+    return speech.subscribe((speaking) => {
+      setIsSpeaking(speaking);
+    });
+  }, []);
 
   // Modal form states
   const [entryType, setEntryType] = useState<PaymentType>('weekly_settlement');
@@ -72,6 +80,11 @@ export const WageProtectionLedger: React.FC<WageProtectionLedgerProps> = ({
   const paymentsAck = 'paymentsAcknowledged' in stats ? stats.paymentsAcknowledged : 0;
 
   const handleSpeakLedger = () => {
+    if (isSpeaking) {
+      speech.stop();
+      return;
+    }
+
     if (lang === 'hi') {
       speech.speak(
         `${worker.hindiName} का मजदूरी खाता। कुल अर्जित मजदूरी ₹${grossWages}। कुल प्राप्त भुगतान ₹${paymentsRecorded}। वर्तमान में शुद्ध देय बकाया राशि ₹${outstandingDue} है। सहायता हेतु हेल्पलाइन ${APP_CONFIG.CONTACT_PHONE}।`,
@@ -189,11 +202,25 @@ export const WageProtectionLedger: React.FC<WageProtectionLedgerProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleSpeakLedger}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-sand-100 hover:bg-sand-200 text-ink-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
-            title={t('audioReadout', lang)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
+              isSpeaking
+                ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 ring-1 ring-rose-300'
+                : 'bg-sand-100 hover:bg-sand-200 text-ink-700'
+            }`}
+            title={isSpeaking ? t('stopAudio', lang) : t('audioReadout', lang)}
+            aria-label={isSpeaking ? t('stopAudio', lang) : t('audioReadout', lang)}
           >
-            <Volume2 className="w-3.5 h-3.5 text-brass-600" />
-            <span>{t('audioReadout', lang)}</span>
+            {isSpeaking ? (
+              <>
+                <Square className="w-3.5 h-3.5 fill-current text-rose-600 animate-pulse" />
+                <span className="text-rose-700 font-bold">{t('stopAudio', lang)}</span>
+              </>
+            ) : (
+              <>
+                <Volume2 className="w-3.5 h-3.5 text-brass-600" />
+                <span>{t('audioReadout', lang)}</span>
+              </>
+            )}
           </button>
 
           <button

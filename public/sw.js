@@ -1,10 +1,10 @@
 /**
- * Shram Setu 2.0 — Service Worker
+ * WurkUp — Service Worker
  * Caches static application shell for offline load.
  * Confidential user API responses and private records are never cached indiscriminately.
  */
 
-const CACHE_NAME = 'shram-setu-shell-v3';
+const CACHE_NAME = 'wurkup-shell-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

@@ -87,7 +87,7 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
     }
 
     if (!privacyAccepted) {
-      setError('You must accept the Shram Setu privacy terms and data use policy.');
+      setError('You must accept the WurkUp privacy terms and data use policy.');
       return;
     }
 
@@ -118,7 +118,7 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
   return (
     <AuthLayout
       eyebrow="Create account"
-      title="Set up your Shram Setu record"
+      title="Set up your WurkUp record"
       subtitle="One account, a permanent QR pass, and a wage ledger you can show to any authority."
       icon={<ShieldCheck className="h-5 w-5" />}
       onNavigate={onNavigate}

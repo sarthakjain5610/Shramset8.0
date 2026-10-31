@@ -31,14 +31,11 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
           <button
             onClick={() => onNavigate('home')}
             className="text-left group cursor-pointer focus:outline-none min-w-0"
-            title="Shram Setu 2.0 Home"
+            title="WurkUp Home"
           >
             <div className="flex items-center gap-1.5">
               <span className="text-base sm:text-lg font-bold tracking-tight text-slate-900 group-hover:text-emerald-800 transition-colors whitespace-nowrap">
-                Shram Setu
-              </span>
-              <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
-                2.0
+                WurkUp
               </span>
             </div>
             <p className="text-[10px] text-slate-500 hidden md:block whitespace-nowrap truncate max-w-[220px]">

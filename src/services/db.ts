@@ -7,7 +7,9 @@ import {
   WelfareScheme,
   AuditEvent,
   ApprovalRequest,
-  WageBreakdown 
+  WageBreakdown,
+  WorkerReview,
+  WorkerRatingSummary
 } from '../types';
 import { calculateRecordBreakdown, calculateShiftWage } from './wageEngine';
 import { idb } from './indexedDB';
@@ -38,6 +40,14 @@ export const INITIAL_WORKERS: Worker[] = [
     bankAccountLast4: '3819',
     ifscCode: 'SBIN0003042',
     upiId: '9826014820@sbi',
+    ratingSummary: {
+      average: 4.9,
+      totalReviews: 28,
+      craftsmanship: 4.9,
+      punctuality: 4.8,
+      safetyCompliance: 5.0,
+      breakdown: { 5: 25, 4: 3, 3: 0, 2: 0, 1: 0 },
+    },
     isDemoRecord: true,
   },
   {
@@ -63,6 +73,14 @@ export const INITIAL_WORKERS: Worker[] = [
     bankAccountLast4: '9920',
     ifscCode: 'BKID0008819',
     upiId: 'sunitagond@boi',
+    ratingSummary: {
+      average: 4.8,
+      totalReviews: 34,
+      craftsmanship: 4.8,
+      punctuality: 4.9,
+      safetyCompliance: 5.0,
+      breakdown: { 5: 28, 4: 5, 3: 1, 2: 0, 1: 0 },
+    },
     isDemoRecord: true,
   },
   {
@@ -88,6 +106,14 @@ export const INITIAL_WORKERS: Worker[] = [
     bankAccountLast4: '1104',
     ifscCode: 'PUNB0182700',
     upiId: 'vermasantosh@pnb',
+    ratingSummary: {
+      average: 4.9,
+      totalReviews: 19,
+      craftsmanship: 5.0,
+      punctuality: 4.8,
+      safetyCompliance: 4.9,
+      breakdown: { 5: 17, 4: 2, 3: 0, 2: 0, 1: 0 },
+    },
     isDemoRecord: true,
   },
   {
@@ -113,6 +139,14 @@ export const INITIAL_WORKERS: Worker[] = [
     bankAccountLast4: '5561',
     ifscCode: 'CBIN0283921',
     upiId: 'mukeshyadav@centralbank',
+    ratingSummary: {
+      average: 4.7,
+      totalReviews: 15,
+      craftsmanship: 4.6,
+      punctuality: 4.9,
+      safetyCompliance: 4.8,
+      breakdown: { 5: 11, 4: 3, 3: 1, 2: 0, 1: 0 },
+    },
     isDemoRecord: true,
   },
   {
@@ -138,7 +172,97 @@ export const INITIAL_WORKERS: Worker[] = [
     bankAccountLast4: '7203',
     ifscCode: 'BARB0VIJIND',
     upiId: 'geetamalviya@bob',
+    ratingSummary: {
+      average: 4.8,
+      totalReviews: 22,
+      craftsmanship: 4.9,
+      punctuality: 4.8,
+      safetyCompliance: 4.9,
+      breakdown: { 5: 18, 4: 4, 3: 0, 2: 0, 1: 0 },
+    },
     isDemoRecord: true,
+  },
+];
+
+// Initial Verified Reviews for Artisan Portfolios
+export const INITIAL_REVIEWS: WorkerReview[] = [
+  {
+    id: 'REV-001',
+    workerId: 'WKR-MP-001',
+    raterName: 'Anil Sisodiya (AE)',
+    raterRole: 'engineer',
+    siteName: 'Indore Metro Line 3 Viaduct Package',
+    rating: 5,
+    skillRating: 5,
+    punctualityRating: 5,
+    safetyRating: 5,
+    comment: 'Exemplary head mason work. Pier cap alignment and mortar consistency are 100% compliant with MP Metro safety specs.',
+    date: '2026-10-14',
+  },
+  {
+    id: 'REV-002',
+    workerId: 'WKR-MP-001',
+    raterName: 'Vikram Patel',
+    raterRole: 'contractor',
+    siteName: 'Indore Metro Line 3 Viaduct Package',
+    rating: 5,
+    skillRating: 5,
+    punctualityRating: 5,
+    safetyRating: 5,
+    comment: 'Zero muster absenteeism. Always equips full safety harness and hard hat on high-altitude scaffoldings.',
+    date: '2026-10-02',
+  },
+  {
+    id: 'REV-003',
+    workerId: 'WKR-MP-001',
+    raterName: 'Rajendra Joshi',
+    raterRole: 'supervisor',
+    siteName: 'Indore Smart City Multi-Level Car Parking',
+    rating: 4,
+    skillRating: 5,
+    punctualityRating: 4,
+    safetyRating: 5,
+    comment: 'Highly skilled in reinforced brickwork and plastering. Led a gang of 8 artisans smoothly.',
+    date: '2026-09-18',
+  },
+  {
+    id: 'REV-004',
+    workerId: 'WKR-MP-002',
+    raterName: 'Vikram Patel',
+    raterRole: 'contractor',
+    siteName: 'Indore Metro Line 3 Viaduct Package',
+    rating: 5,
+    skillRating: 5,
+    punctualityRating: 5,
+    safetyRating: 5,
+    comment: 'Fastest rebar tying on site. Maintains perfect spacing as per structural drawings.',
+    date: '2026-10-18',
+  },
+  {
+    id: 'REV-005',
+    workerId: 'WKR-MP-002',
+    raterName: 'Anil Sisodiya (AE)',
+    raterRole: 'engineer',
+    siteName: 'Indore Metro Line 3 Viaduct Package',
+    rating: 4,
+    skillRating: 4,
+    punctualityRating: 5,
+    safetyRating: 5,
+    comment: 'Very disciplined, strict compliance with cut-and-bend safety protocols.',
+    date: '2026-10-05',
+  },
+  {
+    id: 'REV-006',
+    workerId: 'WKR-MP-003',
+    raterName: 'Kamal Sharma',
+    raterRole: 'supervisor',
+    siteName: 'Rau Bypass Commercial Complex',
+    rating: 5,
+    skillRating: 5,
+    punctualityRating: 5,
+    safetyRating: 5,
+    comment: 'Flawless 3-phase wiring and distribution board cabling. High electrical safety compliance.',
+    date: '2026-10-10',
   },
 ];
 
@@ -557,6 +681,7 @@ class ShramSetuDB {
   private grievances: DisputeGrievance[] = [];
   private auditEvents: AuditEvent[] = [];
   private approvalRequests: ApprovalRequest[] = [];
+  private reviews: WorkerReview[] = [];
   private isInitialized = false;
 
   constructor() {
@@ -576,6 +701,7 @@ class ShramSetuDB {
     let loadedLedger = INITIAL_LEDGER;
     let loadedGrievances = INITIAL_GRIEVANCES;
     let loadedApprovals = INITIAL_APPROVAL_REQUESTS;
+    let loadedReviews = INITIAL_REVIEWS;
 
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
@@ -591,6 +717,8 @@ class ShramSetuDB {
         if (g) loadedGrievances = JSON.parse(g);
         const reqs = window.localStorage.getItem('shramsetu_approval_requests');
         if (reqs) loadedApprovals = JSON.parse(reqs);
+        const revs = window.localStorage.getItem('shramsetu_reviews');
+        if (revs) loadedReviews = JSON.parse(revs);
       } catch {
         // Safe fallback
       }
@@ -603,6 +731,7 @@ class ShramSetuDB {
     this.grievances = loadedGrievances;
     this.auditEvents = INITIAL_AUDIT_EVENTS;
     this.approvalRequests = loadedApprovals;
+    this.reviews = loadedReviews;
     this.isInitialized = true;
 
     // Trigger background IndexedDB warm-up and migration
@@ -933,6 +1062,108 @@ class ShramSetuDB {
   }
 
   // --------------------------------------------------------------------------
+  // Worker Reviews & Performance Rating API
+  // --------------------------------------------------------------------------
+  public getReviews(workerId?: string): WorkerReview[] {
+    this.initSync();
+    if (workerId) {
+      return this.reviews.filter((r) => r.workerId === workerId);
+    }
+    return [...this.reviews];
+  }
+
+  public getWorkerRatingSummary(workerId: string): WorkerRatingSummary {
+    this.initSync();
+    const worker = this.getWorkerById(workerId);
+    const workerReviews = this.getReviews(workerId);
+
+    if (workerReviews.length === 0) {
+      return (
+        worker?.ratingSummary || {
+          average: 5.0,
+          totalReviews: 0,
+          craftsmanship: 5.0,
+          punctuality: 5.0,
+          safetyCompliance: 5.0,
+          breakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+        }
+      );
+    }
+
+    const total = workerReviews.length;
+    const avgScore = Number((workerReviews.reduce((sum, r) => sum + r.rating, 0) / total).toFixed(1));
+    const avgCraft = Number(
+      (workerReviews.reduce((sum, r) => sum + (r.skillRating || r.rating), 0) / total).toFixed(1)
+    );
+    const avgPunct = Number(
+      (workerReviews.reduce((sum, r) => sum + (r.punctualityRating || r.rating), 0) / total).toFixed(1)
+    );
+    const avgSafety = Number(
+      (workerReviews.reduce((sum, r) => sum + (r.safetyRating || r.rating), 0) / total).toFixed(1)
+    );
+
+    const breakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    workerReviews.forEach((r) => {
+      const star = Math.min(5, Math.max(1, Math.round(r.rating))) as 1 | 2 | 3 | 4 | 5;
+      breakdown[star] = (breakdown[star] || 0) + 1;
+    });
+
+    return {
+      average: avgScore,
+      totalReviews: total,
+      craftsmanship: avgCraft,
+      punctuality: avgPunct,
+      safetyCompliance: avgSafety,
+      breakdown,
+    };
+  }
+
+  public addWorkerReview(reviewInput: Omit<WorkerReview, 'id' | 'date'> & { id?: string; date?: string }): {
+    summary: WorkerRatingSummary;
+    review: WorkerReview;
+  } {
+    this.initSync();
+    const review: WorkerReview = {
+      ...reviewInput,
+      id: reviewInput.id || `REV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      date: reviewInput.date || new Date().toISOString().split('T')[0],
+    };
+
+    this.reviews.unshift(review);
+    this.persist('reviews', this.reviews);
+
+    // Update worker's ratingSummary in memory & storage
+    const summary = this.getWorkerRatingSummary(review.workerId);
+    const workerIndex = this.workers.findIndex((w) => w.id === review.workerId);
+    if (workerIndex >= 0) {
+      this.workers[workerIndex] = {
+        ...this.workers[workerIndex],
+        ratingSummary: summary,
+      };
+      this.persist('workers', this.workers);
+    }
+
+    // Append cryptographic audit event for transparency
+    this.recordAuditEvent(
+      'work_record',
+      review.id,
+      'created',
+      review.raterRole === 'contractor' ? 'contractor' : 'auditor',
+      review.raterName,
+      {
+        workerId: review.workerId,
+        rating: review.rating,
+        craftsmanship: review.skillRating,
+        safety: review.safetyRating,
+        comment: review.comment,
+        date: review.date,
+      }
+    ).catch(() => {});
+
+    return { summary, review };
+  }
+
+  // --------------------------------------------------------------------------
   // Worker Statistics & Authoritative Breakdown
   // --------------------------------------------------------------------------
   public getWorkerStats(workerId: string): WageBreakdown {
@@ -965,6 +1196,7 @@ class ShramSetuDB {
     this.ledger = [...INITIAL_LEDGER, ...userLedger];
     this.grievances = [...INITIAL_GRIEVANCES, ...userGrievances];
     this.auditEvents = [...INITIAL_AUDIT_EVENTS];
+    this.reviews = [...INITIAL_REVIEWS];
 
     this.persistAll();
   }
@@ -979,6 +1211,7 @@ class ShramSetuDB {
     this.ledger = [...INITIAL_LEDGER];
     this.grievances = [...INITIAL_GRIEVANCES];
     this.auditEvents = [...INITIAL_AUDIT_EVENTS];
+    this.reviews = [...INITIAL_REVIEWS];
     this.persistAll();
   }
 
@@ -999,6 +1232,7 @@ class ShramSetuDB {
     this.persist('ledger', this.ledger);
     this.persist('grievances', this.grievances);
     this.persist('approval_requests', this.approvalRequests);
+    this.persist('reviews', this.reviews);
   }
 
   // --------------------------------------------------------------------------
@@ -1008,7 +1242,7 @@ class ShramSetuDB {
     const backup = {
       schemaVersion: '2.0.0',
       exportedAt: new Date().toISOString(),
-      platform: 'Shram Setu 2.0',
+      platform: 'WurkUp',
       workers: this.getWorkers(),
       sites: this.getSites(),
       attendance: this.getAttendance(),

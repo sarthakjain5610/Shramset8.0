@@ -1,11 +1,11 @@
 /**
- * Centralized application configuration for Shram Setu 2.0
+ * Centralized application configuration for WurkUp
  * Preserves consistent project contact details, helpline numbers, and legal references.
  */
 
 export const APP_CONFIG = {
-  PROJECT_NAME: 'Shram Setu 2.0',
-  PROJECT_NAME_HI: 'श्रम सेतु 2.0',
+  PROJECT_NAME: 'WurkUp',
+  PROJECT_NAME_HI: 'WurkUp (वर्कअप)',
   VERSION: '2.0.0',
   
   // Project Designated Contact Phone Number (Updated as per requirement)
@@ -17,7 +17,7 @@ export const APP_CONFIG = {
   WHATSAPP_LINK: 'https://wa.me/917909348017',
 
   // Project Support and Civic Lab details
-  SUPPORT_EMAIL: 'support@shramsetu.in',
+  SUPPORT_EMAIL: 'support@wurkup.in',
   LAB_LOCATION: 'Indore, Madhya Pradesh',
   INNOVATION_EVENT: 'Senior Bal Vigyan Gold Innovation Exhibit, Indore (MP)',
 

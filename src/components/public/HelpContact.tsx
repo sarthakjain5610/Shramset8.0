@@ -39,7 +39,7 @@ const QUICK_HELP = [
     answer: (
       <>
         Do not sign anything. Call the helpline and note the date, site name and supervisor. If your
-        contractor is on Shram Setu, an approval request will appear on your account — approving it is
+        contractor is on WurkUp, an approval request will appear on your account — approving it is
         what creates the record. If they are not, we log the complaint in the same format used for
         statutory filings.
       </>
@@ -56,7 +56,7 @@ const QUICK_HELP = [
     ),
   },
   {
-    question: 'Can I use Shram Setu without a smartphone?',
+    question: 'Can I use WurkUp without a smartphone?',
     answer: (
       <>
         Yes. The QR pass prints on paper and can be scanned by the contractor’s phone. For approvals

@@ -132,7 +132,7 @@ try {
     ['#/privacy', 'Privacy and data use'],
     ['#/help', 'Help, support'],
     ['#/sign-in', 'Sign in to your portal'],
-    ['#/create-account', 'Set up your Shram Setu record'],
+    ['#/create-account', 'Set up your WurkUp record'],
     ['#/forgot-password', 'Reset your password'],
     ['#/verify', 'Verify a Smart Shram Pass'],
   ];
@@ -246,7 +246,7 @@ try {
 
   record('Worker sign-up lands in portal', text().includes('Worker account'), `hash=${w.location.hash}`);
   a11yAudit('worker portal');
-  record('New account starts clean', text().includes('No shift records') || text().includes('Welcome to Shram Setu'));
+  record('New account starts clean', text().includes('No shift records') || text().includes('Welcome to WurkUp'));
   record('Portal shows approval tab', text().includes('Approvals'));
 
   // Tab switching
@@ -269,7 +269,7 @@ try {
   await click(demoButton);
   await flush(160);
   record('Judge demo launches', text().includes('Judge Demo') || text().includes('Evaluation'), `hash=${w.location.hash}`);
-  record('Judge demo has worker pass tab', text().includes('Smart Pass') || text().includes('SHRAM SETU'));
+  record('Judge demo has worker pass tab', text().includes('Smart Pass') || text().includes('WURKUP') || text().includes('Work Pass'));
   a11yAudit('judge demo');
 
   const welfareTab = findByText('button', 'Welfare');

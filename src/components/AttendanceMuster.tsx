@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Calendar, 
   Clock, 
@@ -9,6 +9,7 @@ import {
   QrCode, 
   Camera, 
   Volume2, 
+  Square,
   Search,
   Check
 } from 'lucide-react';
@@ -41,6 +42,13 @@ export const AttendanceMuster: React.FC<AttendanceMusterProps> = ({
   const [scanSuccess, setScanSuccess] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'present' | 'half_day' | 'overtime'>('all');
+  const [isSpeaking, setIsSpeaking] = useState(speech.getIsSpeaking());
+
+  useEffect(() => {
+    return speech.subscribe((speaking) => {
+      setIsSpeaking(speaking);
+    });
+  }, []);
 
   const selectedSite = sites.find((s) => s.id === selectedSiteId) || sites[0];
 
@@ -128,6 +136,11 @@ export const AttendanceMuster: React.FC<AttendanceMusterProps> = ({
   };
 
   const handleSpeakHistory = () => {
+    if (isSpeaking) {
+      speech.stop();
+      return;
+    }
+
     const totalPunches = attendanceList.length;
     const totalWages = attendanceList.reduce((sum, a) => sum + a.calculatedWage, 0);
 
@@ -176,10 +189,25 @@ export const AttendanceMuster: React.FC<AttendanceMusterProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handleSpeakHistory}
-              className="btn btn-sm border border-brass-200 bg-brass-50 text-brass-800 hover:bg-brass-100"
+              className={`btn btn-sm transition-all duration-200 cursor-pointer ${
+                isSpeaking
+                  ? 'border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 ring-1 ring-rose-300'
+                  : 'border border-brass-200 bg-brass-50 text-brass-800 hover:bg-brass-100'
+              }`}
+              title={isSpeaking ? t('stopAudio', lang) : t('attendanceListenSummary', lang)}
+              aria-label={isSpeaking ? t('stopAudio', lang) : t('attendanceListenSummary', lang)}
             >
-              <Volume2 className="w-3.5 h-3.5 text-brass-600" />
-              <span>{t('attendanceListenSummary', lang)}</span>
+              {isSpeaking ? (
+                <>
+                  <Square className="w-3.5 h-3.5 fill-current text-rose-600 animate-pulse" />
+                  <span className="font-bold text-rose-700">{t('stopAudio', lang)}</span>
+                </>
+              ) : (
+                <>
+                  <Volume2 className="w-3.5 h-3.5 text-brass-600" />
+                  <span>{t('attendanceListenSummary', lang)}</span>
+                </>
+              )}
             </button>
           </div>
         </div>

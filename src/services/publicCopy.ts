@@ -23,7 +23,7 @@ export const PUBLIC_COPY = {
     heroTitleB: 'Every wage explained.',
     heroTitleC: 'Every change traceable.',
     heroBody:
-      'Shram Setu gives informal and construction workers an unalterable digital work record: a reusable QR pass with zero personal data, a transparent wage ledger, and a cryptographic audit chain both sides can verify.',
+      'WurkUp gives informal and construction workers an unalterable digital work record: a reusable QR pass with zero personal data, a transparent wage ledger, and a cryptographic audit chain both sides can verify.',
     ctaPrimary: 'Create your account',
     ctaSecondary: 'See how it works',
     trustNoResale: 'No data resale, ever',
@@ -77,7 +77,7 @@ export const PUBLIC_COPY = {
     heroTitleB: 'हर मजदूरी स्पष्ट।',
     heroTitleC: 'हर बदलाव का प्रमाण।',
     heroBody:
-      'श्रम सेतु असंगठित एवं निर्माण श्रमिकों को एक अपरिवर्तनीय डिजिटल कार्य रिकॉर्ड देता है: बिना किसी निजी जानकारी वाला पुनः प्रयोग योग्य क्यूआर पास, पारदर्शी मजदूरी खाता, और दोनों पक्षों द्वारा सत्यापित क्रिप्टोग्राफिक ऑडिट श्रृंखला।',
+      'WurkUp असंगठित एवं निर्माण श्रमिकों को एक अपरिवर्तनीय डिजिटल कार्य रिकॉर्ड देता है: बिना किसी निजी जानकारी वाला पुनः प्रयोग योग्य क्यूआर पास, पारदर्शी मजदूरी खाता, और दोनों पक्षों द्वारा सत्यापित क्रिप्टोग्राफिक ऑडिट श्रृंखला।',
     ctaPrimary: 'अपना खाता बनाएं',
     ctaSecondary: 'कार्यप्रणाली देखें',
     trustNoResale: 'डेटा कभी नहीं बेचा जाता',

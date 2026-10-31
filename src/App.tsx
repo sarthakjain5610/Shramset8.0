@@ -1,5 +1,5 @@
 /**
- * Shram Setu 2.0 - Role-Based Website, Account Lifecycle & Contact Verification
+ * WurkUp - Role-Based Website, Account Lifecycle & Contact Verification
  * Senior Bal Vigyan Innovation · Indore, Madhya Pradesh
  *
  * Strict Architecture Rules:
@@ -132,19 +132,19 @@ export default function App() {
   // Keep the document title and language attribute in sync with the app state.
   useEffect(() => {
     const titles: Record<AppRoute, string> = {
-      home: 'Shram Setu 2.0 — Verified Digital Work & Wage Records',
-      'how-it-works': 'How it works · Shram Setu 2.0',
-      'create-account': 'Create an account · Shram Setu 2.0',
-      'sign-in': 'Sign in · Shram Setu 2.0',
-      'forgot-password': 'Password recovery · Shram Setu 2.0',
-      privacy: 'Privacy & data use · Shram Setu 2.0',
-      help: 'Help & contact · Shram Setu 2.0',
-      about: 'About the project · Shram Setu 2.0',
-      verify: 'Verify a pass · Shram Setu 2.0',
-      'not-found': 'Page not found · Shram Setu 2.0',
-      worker: 'Worker portal · Shram Setu 2.0',
-      contractor: 'Contractor portal · Shram Setu 2.0',
-      'judge-demo': 'Judge demo · Shram Setu 2.0',
+      home: 'WurkUp — Verified Digital Work & Wage Records',
+      'how-it-works': 'How it works · WurkUp',
+      'create-account': 'Create an account · WurkUp',
+      'sign-in': 'Sign in · WurkUp',
+      'forgot-password': 'Password recovery · WurkUp',
+      privacy: 'Privacy & data use · WurkUp',
+      help: 'Help & contact · WurkUp',
+      about: 'About the project · WurkUp',
+      verify: 'Verify a pass · WurkUp',
+      'not-found': 'Page not found · WurkUp',
+      worker: 'Worker portal · WurkUp',
+      contractor: 'Contractor portal · WurkUp',
+      'judge-demo': 'Judge demo · WurkUp',
     };
 
     document.title = titles[routeState.route] || titles.home;

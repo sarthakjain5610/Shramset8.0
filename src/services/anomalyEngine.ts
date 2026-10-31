@@ -1,5 +1,5 @@
 /**
- * Shram Setu 2.0 — Deterministic Explainable Anomaly Detection Engine
+ * WurkUp — Deterministic Explainable Anomaly Detection Engine
  * Evaluates rules RULE-01 through RULE-07 without speculative AI scoring or accusations of misconduct.
  */
 

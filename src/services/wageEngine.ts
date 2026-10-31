@@ -1,5 +1,5 @@
 /**
- * Shram Setu 2.0 — Authoritative Wage Calculation Engine
+ * WurkUp — Authoritative Wage Calculation Engine
  * Implements strict statutory wage arithmetic in integer paise to eliminate floating-point drift.
  * Separates gross earnings, deductions, recorded payments, worker acknowledgments, and outstanding balance.
  */

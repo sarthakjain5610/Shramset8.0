@@ -1,5 +1,5 @@
 /**
- * Shram Setu 2.0 — Supabase Client & Backend Connectivity Module
+ * WurkUp — Supabase Client & Backend Connectivity Module
  * Safely inspects environment variables without exposing secrets or fabricating connections.
  * Operates in explicitly labeled Local Demo Mode when backend credentials are not provisioned.
  */

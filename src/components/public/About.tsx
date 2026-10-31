@@ -61,7 +61,7 @@ export const About: React.FC<AboutProps> = ({ onNavigate, lang }) => {
             <span className="italic text-forest-700">build Indore</span>
           </>
         }
-        description="Shram Setu began as a field observation: the only record of a construction worker's month is a diary kept by the person who owes them money. This is our attempt to give both sides the same page."
+        description="WurkUp began as a field observation: the only record of a construction worker's month is a diary kept by the person who owes them money. This is our attempt to give both sides the same page."
       >
         <div className="flex flex-wrap items-center gap-2.5">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-brass-300/70 bg-brass-50/80 px-3 py-1.5 text-[10.5px] font-bold text-brass-900">
@@ -89,7 +89,7 @@ export const About: React.FC<AboutProps> = ({ onNavigate, lang }) => {
           </Reveal>
           <Reveal delay={130}>
             <p>
-              Shram Setu was conceived during field inquiries at civil construction sites across
+              WurkUp was conceived during field inquiries at civil construction sites across
               Indore. Over <strong>85% of India’s construction workforce</strong> operates in the
               unorganised sector — vulnerable to delayed payments, arbitrary muster cuts and denial of
               overtime.

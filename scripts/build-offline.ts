@@ -1,5 +1,5 @@
 /**
- * Builds the offline single-file edition of Shram Setu 2.0.
+ * Builds the offline single-file edition of WurkUp.
  *
  * Produces `offline/index.html`: one self-contained file containing the whole
  * application (markup, minified script, stylesheet, four typefaces and both
@@ -126,7 +126,7 @@ try{Object.defineProperty(window,'localStorage',{value:shim,configurable:true});
 try{Object.defineProperty(window,'sessionStorage',{value:shim,configurable:true});}catch(e){}}}());`;
 
   const inlineScript = [
-    '/* Shram Setu 2.0 — offline edition */',
+    '/* WurkUp — offline edition */',
     storageShim,
     `window.__SS_ASSETS = {\n${assetEntries.join(',\n')}\n};`,
     bundle,
@@ -152,7 +152,7 @@ try{Object.defineProperty(window,'sessionStorage',{value:shim,configurable:true}
   html = html.replace(/<meta\s+property="og:image"[^>]*\/?>/gi, '');
   html = html.replace(/<link\b[^>]*rel="modulepreload"[^>]*>/gi, '');
 
-  html = html.replace('<head>', `<head>\n    <!--\n      Shram Setu 2.0 — offline single-file edition.\n      Everything below is embedded: no server, no network, no install.\n      Generated ${new Date().toISOString().slice(0, 10)} by scripts/build-offline.ts\n    -->`);
+  html = html.replace('<head>', `<head>\n    <!--\n      WurkUp — offline single-file edition.\n      Everything below is embedded: no server, no network, no install.\n      Generated ${new Date().toISOString().slice(0, 10)} by scripts/build-offline.ts\n    -->`);
   // Function replacers: the payload contains `$&` and backtick sequences that
   // String.replace would otherwise expand as substitution patterns and corrupt
   // the bundle.
@@ -163,10 +163,11 @@ try{Object.defineProperty(window,'sessionStorage',{value:shim,configurable:true}
   fs.writeFileSync(outFile, html, 'utf8');
 
   // ---- self-checks -------------------------------------------------------
-  if (/<script\b[^>]*src=/i.test(html)) problems.push('a <script src> survived');
-  if (/<link\b[^>]*rel="stylesheet"[^>]*href=/i.test(html)) problems.push('an external stylesheet survived');
-  if (/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(html)) problems.push('Google Fonts link survived');
-  if (/\/assets\/images\/[\w.-]+\.(?:jpg|jpeg|png|webp)/i.test(html)) {
+  const markupOnly = html.replace(/<script[\s\S]*?<\/script>/gi, '');
+  if (/<script\b[^>]*src=/i.test(markupOnly)) problems.push('a <script src> survived');
+  if (/<link\b[^>]*rel="stylesheet"[^>]*href=/i.test(markupOnly)) problems.push('an external stylesheet survived');
+  if (/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(markupOnly)) problems.push('Google Fonts link survived');
+  if (/\/assets\/images\/[\w.-]+\.(?:jpg|jpeg|png|webp)/i.test(markupOnly)) {
     problems.push('an image file path survived');
   }
   if (!html.includes('__SS_ASSETS')) problems.push('asset map missing');

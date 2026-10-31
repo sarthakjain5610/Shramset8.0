@@ -65,7 +65,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
             <BrandMark size="md" />
             <div>
               <p className="font-display text-[1.0625rem] font-semibold leading-none text-white">
-                Shram Setu
+                WurkUp
               </p>
               <p className="mt-1 text-[9.5px] font-semibold uppercase tracking-[0.18em] text-sand-200/62">
                 Verified work &amp; wage records

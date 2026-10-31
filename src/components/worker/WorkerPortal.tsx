@@ -271,7 +271,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNaviga
       </div>
 
       {/* Primary navigation rail */}
-      <div className="sticky top-[var(--app-header-offset,4.25rem)] z-30 -mx-1 rounded-2xl border border-sand-200 bg-sand-50/90 px-1.5 py-1.5 backdrop-blur-xl">
+      <div className="sticky top-[var(--app-header-offset,4.25rem)] z-20 -mx-1 rounded-2xl border border-sand-200 bg-sand-50/90 px-1.5 py-1.5 backdrop-blur-xl">
         <div className="hide-scrollbar flex items-center gap-1 overflow-x-auto" role="tablist" aria-label="Worker portal sections">
           {([
             { id: 'overview', label: bi(lang, 'Overview', 'सारांश'), icon: LayoutDashboard },
@@ -391,7 +391,9 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNaviga
               <div className="w-12 h-12 rounded-full bg-forest-50 text-forest-800 flex items-center justify-center mx-auto">
                 <QrCode className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-ink-900">Welcome to Shram Setu!</h3>
+              <h3 className="text-base font-bold text-ink-900">
+                {bi(lang, 'Welcome to WurkUp!', 'WurkUp में आपका स्वागत है!')}
+              </h3>
               <p className="text-xs text-ink-600 max-w-md mx-auto leading-relaxed">
                 Your genuine account has been configured with an opaque QR pass. When you arrive at a construction site, show your QR pass to the contractor to punch your first shift.
               </p>
@@ -566,51 +568,55 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNaviga
         </div>
       )}
 
-      {/* TAB 4: MY QR PASS */}
+      {/* TAB 4: MY QR PASS & SMART SHRAM PASS */}
       {activeTab === 'qr' && (
         <div className="space-y-6">
-          <div className="max-w-md mx-auto bg-white rounded-3xl border border-sand-200 p-6 sm:p-8 shadow-md text-center space-y-4">
-            <div className="w-10 h-10 rounded-xl bg-forest-100 text-forest-800 flex items-center justify-center mx-auto">
-              <QrCode className="w-5 h-5" />
-            </div>
-            <h2 className="text-lg font-bold text-ink-900">Your Permanent Smart Shram Pass</h2>
-            <p className="text-xs text-ink-600 leading-relaxed">
-              Show this QR pass to any authorized site supervisor to record shifts. It contains exclusively an opaque token — zero phone numbers or private wages are exposed.
-            </p>
-
-            <div className="p-4 bg-sand-50 rounded-2xl border border-sand-200 inline-block mx-auto">
-              <QRCodeDisplay value={qrPayloadUrl} size={180} />
-            </div>
-
-            <div className="bg-sand-50 p-3 rounded-xl border border-sand-200 text-xs text-left space-y-1">
-              <div className="flex justify-between">
-                <span className="text-ink-500">Worker Reference:</span>
-                <span className="font-mono font-bold text-ink-800">{user.id}</span>
+          {workerRecord ? (
+            <WorkerCard worker={workerRecord} site={activeSite} stats={stats} lang={lang} />
+          ) : (
+            <div className="max-w-md mx-auto bg-white rounded-3xl border border-sand-200 p-6 sm:p-8 shadow-md text-center space-y-4">
+              <div className="w-10 h-10 rounded-xl bg-forest-100 text-forest-800 flex items-center justify-center mx-auto">
+                <QrCode className="w-5 h-5" />
               </div>
-              <div className="flex justify-between">
-                <span className="text-ink-500">Opaque Token:</span>
-                <span className="font-mono text-ink-600 truncate max-w-[200px]">{user.qrReferenceToken || user.id}</span>
+              <h2 className="text-lg font-bold text-ink-900">Your Permanent Smart Shram Pass</h2>
+              <p className="text-xs text-ink-600 leading-relaxed">
+                Show this QR pass to any authorized site supervisor to record shifts. It contains exclusively an opaque token — zero phone numbers or private wages are exposed.
+              </p>
+
+              <div className="p-4 bg-sand-50 rounded-2xl border border-sand-200 inline-block mx-auto">
+                <QRCodeDisplay value={qrPayloadUrl} size={180} />
+              </div>
+
+              <div className="bg-sand-50 p-3 rounded-xl border border-sand-200 text-xs text-left space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-ink-500">Worker Reference:</span>
+                  <span className="font-mono font-bold text-ink-800">{user.id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-ink-500">Opaque Token:</span>
+                  <span className="font-mono text-ink-600 truncate max-w-[200px]">{user.qrReferenceToken || user.id}</span>
+                </div>
+              </div>
+
+              <div className="flex justify-center gap-3 pt-2">
+                <button
+                  onClick={copyQrToken}
+                  className="px-4 py-2 border border-ink-300 hover:bg-sand-50 rounded-xl text-xs font-semibold text-ink-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {copiedToken ? <Check className="w-3.5 h-3.5 text-forest-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedToken ? 'Token Copied!' : 'Copy Reference'}</span>
+                </button>
+
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-2 bg-forest-800 hover:bg-forest-700 rounded-xl text-xs font-semibold text-white flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Physical Pass</span>
+                </button>
               </div>
             </div>
-
-            <div className="flex justify-center gap-3 pt-2">
-              <button
-                onClick={copyQrToken}
-                className="px-4 py-2 border border-ink-300 hover:bg-sand-50 rounded-xl text-xs font-semibold text-ink-700 flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                {copiedToken ? <Check className="w-3.5 h-3.5 text-forest-600" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedToken ? 'Token Copied!' : 'Copy Reference'}</span>
-              </button>
-
-              <button
-                onClick={() => window.print()}
-                className="px-4 py-2 bg-forest-800 hover:bg-forest-700 rounded-xl text-xs font-semibold text-white flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Print Physical Pass</span>
-              </button>
-            </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -845,84 +851,136 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNaviga
         </div>
       )}
 
-      {/* New Dispute Modal */}
-      {showNewDisputeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-lg w-full border border-sand-200 p-6 shadow-xl space-y-4">
-            <h3 className="text-base font-bold text-ink-900">File Formal Grievance (Samadhan)</h3>
-            <p className="text-xs text-ink-500">This will be preserved in the cryptographic audit chain and formatted for the Indore District Labor Officer.</p>
+      </div>
+      {/* End Active section */}
 
-            <form onSubmit={handleCreateDispute} className="space-y-3 text-xs">
+      {/* New Dispute Modal (Rendered outside animated container at root level to prevent stacking context clipping) */}
+      {showNewDisputeModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-3 sm:p-4 md:p-6 bg-ink-950/75 backdrop-blur-sm no-print animate-fade-up"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dispute-dialog-title"
+          onClick={() => setShowNewDisputeModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative my-auto w-full max-w-lg max-h-[min(90vh,640px)] flex flex-col rounded-2xl sm:rounded-3xl border border-sand-200 bg-white shadow-[0_30px_70px_-20px_rgba(10,34,25,0.7)] overflow-hidden"
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-sand-200 px-5 py-4 bg-sand-50/80 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <h3 id="dispute-dialog-title" className="text-base font-bold text-ink-900 leading-tight truncate">
+                    {bi(lang, 'File Formal Grievance (Samadhan)', 'औपचारिक शिकायत दर्ज करें (समाधान)')}
+                  </h3>
+                  <p className="text-[11px] text-ink-500 mt-0.5 truncate">
+                    {bi(
+                      lang,
+                      'Preserved in cryptographic audit chain for Indore DLO.',
+                      'क्रिप्टोग्राफिक ऑडिट चेन में सुरक्षित और इंदौर श्रम अधिकारी हेतु प्रपत्र।'
+                    )}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNewDisputeModal(false)}
+                className="p-1.5 rounded-lg text-ink-400 hover:text-ink-700 hover:bg-sand-200/70 transition-colors shrink-0 cursor-pointer"
+                aria-label={bi(lang, 'Close', 'बंद करें')}
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleCreateDispute} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-3.5 text-xs">
               <div>
-                <label className="block font-semibold text-ink-700 mb-1">Dispute Category</label>
+                <label className="block font-semibold text-ink-700 mb-1">
+                  {bi(lang, 'Dispute Category', 'विवाद की श्रेणी')}
+                </label>
                 <select
                   value={disputeType}
                   onChange={(e) => setDisputeType(e.target.value as any)}
-                  className="w-full p-2 border border-ink-300 rounded-lg bg-white"
+                  className="w-full p-2.5 border border-sand-300 rounded-xl bg-white text-ink-900 font-medium focus:ring-2 focus:ring-rose-500/20 focus:border-rose-600 focus:outline-none transition-all"
                 >
-                  <option value="unpaid_wages">Unpaid Wages / Withheld Pay</option>
-                  <option value="arbitrary_deduction">Arbitrary Deductions / Kharcha Penalty</option>
-                  <option value="denied_overtime">Denied Statutory Overtime</option>
-                  <option value="unsafe_conditions">Unsafe Construction Site Conditions</option>
+                  <option value="unpaid_wages">{bi(lang, 'Unpaid Wages / Withheld Pay', 'बकाया मजदूरी / वेतन में रोक')}</option>
+                  <option value="arbitrary_deduction">{bi(lang, 'Arbitrary Deductions / Kharcha Penalty', 'अनुचित कटौती / खर्चा जुर्माना')}</option>
+                  <option value="denied_overtime">{bi(lang, 'Denied Statutory Overtime', 'ओवरटाइम भुगतान से इनकार')}</option>
+                  <option value="unsafe_conditions">{bi(lang, 'Unsafe Construction Site Conditions', 'असुरक्षित निर्माण कार्यस्थल स्थितियाँ')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block font-semibold text-ink-700 mb-1">Contractor / Supervisor Name</label>
+                <label className="block font-semibold text-ink-700 mb-1">
+                  {bi(lang, 'Contractor / Supervisor Name', 'ठेकेदार / सुपरवाइजर का नाम')}
+                </label>
                 <input
                   type="text"
                   required
                   value={contractorName}
                   onChange={(e) => setContractorName(e.target.value)}
-                  placeholder="e.g., Anil Sisodiya"
-                  className="w-full p-2 border border-ink-300 rounded-lg"
+                  placeholder={bi(lang, 'e.g., Anil Sisodiya', 'उदा. अनिल सिसौदिया')}
+                  className="w-full p-2.5 border border-sand-300 rounded-xl bg-white text-ink-900 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-600 focus:outline-none transition-all"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-ink-700 mb-1">Claimed Amount (INR)</label>
+                <label className="block font-semibold text-ink-700 mb-1">
+                  {bi(lang, 'Claimed Amount (INR)', 'दावा की गई राशि (रुपये)')}
+                </label>
                 <input
                   type="number"
                   required
+                  min={1}
                   value={claimedAmount}
                   onChange={(e) => setClaimedAmount(Number(e.target.value))}
-                  className="w-full p-2 border border-ink-300 rounded-lg font-mono font-bold"
+                  className="w-full p-2.5 border border-sand-300 rounded-xl bg-white text-ink-900 font-mono font-bold focus:ring-2 focus:ring-rose-500/20 focus:border-rose-600 focus:outline-none transition-all"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-ink-700 mb-1">Worker Statement & Incident Details</label>
+                <label className="block font-semibold text-ink-700 mb-1">
+                  {bi(lang, 'Worker Statement & Incident Details', 'श्रमिक का बयान एवं घटना का विवरण')}
+                </label>
                 <textarea
                   required
-                  rows={4}
+                  rows={3}
                   value={disputeDesc}
                   onChange={(e) => setDisputeDesc(e.target.value)}
-                  placeholder="Describe the shifts worked, promised daily wage, and what the contractor stated..."
-                  className="w-full p-2 border border-ink-300 rounded-lg"
+                  placeholder={bi(
+                    lang,
+                    'Describe the shifts worked, promised daily wage, and what the contractor stated...',
+                    'किए गए कार्य दिवस, तय दैनिक मजदूरी और ठेकेदार ने क्या कहा इसका विवरण लिखें...'
+                  )}
+                  className="w-full p-2.5 border border-sand-300 rounded-xl bg-white text-ink-900 leading-relaxed focus:ring-2 focus:ring-rose-500/20 focus:border-rose-600 focus:outline-none transition-all resize-y"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-sand-200 mt-2">
                 <button
                   type="button"
                   onClick={() => setShowNewDisputeModal(false)}
-                  className="px-4 py-2 text-ink-600 hover:bg-sand-100 rounded-lg"
+                  className="px-4 py-2 text-ink-600 hover:text-ink-900 hover:bg-sand-100 rounded-xl font-semibold transition-colors cursor-pointer"
                 >
-                  Cancel
+                  {bi(lang, 'Cancel', 'रद्द करें')}
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-rose-700 hover:bg-rose-600 text-white font-semibold rounded-lg"
+                  className="px-4 py-2 bg-rose-700 hover:bg-rose-800 text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
                 >
-                  Submit Dispute
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span>{bi(lang, 'Submit Dispute', 'शिकायत दर्ज करें')}</span>
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-
-      </div>
     </div>
   );
 };

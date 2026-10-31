@@ -56,7 +56,7 @@ try {
   const { default: App } = await import('../src/App.tsx');
   const html = renderToString(React.createElement(App));
   check('App shell (home route)', html, [
-    'Shram Setu',
+    'WurkUp',
     'Every shift recorded',
     'Create your account',
     'Verified work',
@@ -78,7 +78,7 @@ try {
   const pages: [string, React.ComponentType<any>, string[]][] = [
     ['Home', Home, ['Every wage explained']],
     ['HowItWorks', HowItWorks, ['From the first site check-in']],
-    ['CreateAccount', CreateAccount, ['Set up your Shram Setu record']],
+    ['CreateAccount', CreateAccount, ['Set up your WurkUp record']],
     ['SignIn', SignIn, ['Sign in to your portal']],
     ['PasswordRecovery', PasswordRecovery, ['Reset your password']],
     ['Privacy', Privacy, ['Privacy']],

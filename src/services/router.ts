@@ -1,5 +1,5 @@
 /**
- * Shram Setu 2.0 - Client-Side Route Controller
+ * WurkUp - Client-Side Route Controller
  * Provides reliable, standard URL hash routing compatible with browser back/forward,
  * direct bookmark links, and refresh without server-side route rewrite dependencies.
  */

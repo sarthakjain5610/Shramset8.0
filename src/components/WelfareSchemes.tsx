@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   HeartHandshake, 
   ExternalLink, 
   Calculator, 
   Volume2, 
+  Square,
   CheckCircle2 
 } from 'lucide-react';
 import { WELFARE_SCHEMES } from '../services/db';
@@ -19,6 +20,13 @@ interface WelfareSchemesProps {
 export const WelfareSchemes: React.FC<WelfareSchemesProps> = ({ worker, lang }) => {
   // PM-SYM Pension Calculator state
   const [workerAge, setWorkerAge] = useState<number>(28);
+  const [isSpeaking, setIsSpeaking] = useState(speech.getIsSpeaking());
+
+  useEffect(() => {
+    return speech.subscribe((speaking) => {
+      setIsSpeaking(speaking);
+    });
+  }, []);
 
   // Government defined monthly contributions based on age (18 -> ₹55, 29 -> ₹100, 40 -> ₹200)
   const getContribution = (age: number) => {
@@ -31,6 +39,11 @@ export const WelfareSchemes: React.FC<WelfareSchemesProps> = ({ worker, lang }) 
   const govtMatchingShare = monthlyWorkerShare;
 
   const handleSpeakSchemes = () => {
+    if (isSpeaking) {
+      speech.stop();
+      return;
+    }
+
     if (lang === 'hi') {
       speech.speak(
         `${worker.hindiName} के लिए ई-श्रम एवं मध्य प्रदेश श्रम कल्याण मंडल की प्रमुख योजनाएं। प्रधानमंत्री सुरक्षा बीमा योजना में ₹2,00,000 का दुर्घटना बीमा, बीओसीडब्ल्यू औजार किट अनुदान ₹5,000, एवं श्रम योगी मानधन योजना में 60 वर्ष पश्चात ₹3,000 मासिक सुनिश्चित पेंशन उपलब्ध है।`,
@@ -65,10 +78,25 @@ export const WelfareSchemes: React.FC<WelfareSchemesProps> = ({ worker, lang }) 
           <div className="flex items-center gap-2">
             <button
               onClick={handleSpeakSchemes}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-brass-50 hover:bg-brass-100 text-brass-700 text-xs font-semibold rounded-lg border border-brass-200 transition-colors cursor-pointer"
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all duration-200 cursor-pointer ${
+                isSpeaking
+                  ? 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 ring-1 ring-rose-300'
+                  : 'bg-brass-50 hover:bg-brass-100 text-brass-700 border-brass-200'
+              }`}
+              title={isSpeaking ? t('stopAudio', lang) : t('welfareListenButton', lang)}
+              aria-label={isSpeaking ? t('stopAudio', lang) : t('welfareListenButton', lang)}
             >
-              <Volume2 className="w-3.5 h-3.5 text-brass-600" />
-              <span>{t('welfareListenButton', lang)}</span>
+              {isSpeaking ? (
+                <>
+                  <Square className="w-3.5 h-3.5 fill-current text-rose-600 animate-pulse" />
+                  <span className="font-bold text-rose-700">{t('stopAudio', lang)}</span>
+                </>
+              ) : (
+                <>
+                  <Volume2 className="w-3.5 h-3.5 text-brass-600" />
+                  <span>{t('welfareListenButton', lang)}</span>
+                </>
+              )}
             </button>
           </div>
         </div>
