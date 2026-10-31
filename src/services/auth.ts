@@ -12,9 +12,9 @@
  */
 
 import { UserProfile, UserRole, ContactVerificationStatus, ManualContactCheckRecord } from '../types';
-import { getSupabaseStatus } from './supabase';
+import { supabase } from './supabase';
 import { computeSha256Hex } from './cryptoAudit';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 const SESSION_STORAGE_KEY = 'shramsetu_auth_active_user';
 const REMEMBERED_ID_KEY = 'shramsetu_remembered_login_id';
@@ -50,43 +50,36 @@ export interface SignInParams {
 class AuthService {
   private currentUser: UserProfile | null = null;
   private isJudgeDemo = false;
-  private supabase: SupabaseClient | null = null;
+  private supabase: SupabaseClient | null = supabase;
   private listeners: ((state: AuthState) => void)[] = [];
 
   constructor() {
-    this.initSupabaseIfConfigured();
-    this.restoreSessionSync();
+    this.restoreRemoteSession();
   }
 
-  private initSupabaseIfConfigured(): void {
-    const status = getSupabaseStatus();
-    if (status.isConfigured && status.url) {
-      try {
-        const key = import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env?.VITE_SUPABASE_ANON_KEY;
-        if (key) {
-          this.supabase = createClient(status.url, key);
-        }
-      } catch (err) {
-        console.warn('[Auth] Supabase client initialization skipped:', err);
-      }
-    }
+  private async restoreRemoteSession(): Promise<void> {
+    if (!this.supabase) return;
+    const { data: { subscription } } = this.supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) { this.currentUser = null; this.isJudgeDemo = false; this.notify(); return; }
+      // Defer network work until Supabase's auth callback has returned.
+      queueMicrotask(() => { void this.loadAuthenticatedProfile(session.user.id); });
+    });
+    void subscription;
+    const { data, error } = await this.supabase.auth.getSession();
+    if (!error && data.session?.user) await this.loadAuthenticatedProfile(data.session.user.id);
+    else { this.currentUser = null; this.notify(); }
   }
 
-  private restoreSessionSync(): void {
-    if (typeof window === 'undefined') return;
-
-    try {
-      const savedSession = window.localStorage.getItem(SESSION_STORAGE_KEY);
-      if (savedSession) {
-        const parsed: UserProfile = JSON.parse(savedSession);
-        if (parsed && parsed.id && parsed.role) {
-          this.currentUser = parsed;
-          this.isJudgeDemo = Boolean(parsed.isJudgeDemo);
-        }
-      }
-    } catch {
-      // Safe fallback
+  private async loadAuthenticatedProfile(id: string): Promise<void> {
+    if (!this.supabase) return;
+    const { data, error } = await this.supabase.from('profiles').select('id, role, full_name, phone').eq('id', id).single();
+    if (error || !data || !['worker', 'contractor'].includes(data.role)) {
+      this.currentUser = null; this.isJudgeDemo = false; this.notify(); return;
     }
+    this.currentUser = { id: data.id, fullName: data.full_name, phone: data.phone || '', role: data.role,
+      contactVerificationStatus: 'number_supplied', manualChecks: [], consentToShareContact: false, privacyAccepted: true,
+      qrReferenceToken: '', createdAt: new Date().toISOString(), isJudgeDemo: false };
+    this.isJudgeDemo = false; this.notify();
   }
 
   public getAuthState(): AuthState {
@@ -127,192 +120,34 @@ class AuthService {
    * Register a new Worker or Contractor
    */
   public async signUp(params: SignUpParams): Promise<{ success: boolean; user?: UserProfile; error?: string }> {
-    if (!params.fullName || params.fullName.trim().length < 2) {
-      return { success: false, error: 'Please enter a valid full name (minimum 2 characters).' };
-    }
-
-    if (!params.phone || !/^\+?[0-9\s-]{10,14}$/.test(params.phone.replace(/[\s-]/g, ''))) {
-      return { success: false, error: 'Please provide a valid mobile number with country code (e.g. +91 98260 12345).' };
-    }
-
-    if (!params.privacyAccepted) {
-      return { success: false, error: 'Consent to the WurkUp privacy and data use terms is required.' };
-    }
-
-    // Try Supabase Auth if connected
-    if (this.supabase && params.email && params.password) {
-      try {
-        const { data, error } = await this.supabase.auth.signUp({
-          email: params.email,
-          password: params.password,
-          options: {
-            data: {
-              full_name: params.fullName,
-              phone: params.phone,
-              role: params.role,
-              trade: params.trade || '',
-              organization_name: params.organizationName || '',
-            },
-          },
-        });
-        if (error) {
-          return { success: false, error: error.message };
-        }
-      } catch (err: any) {
-        console.warn('[Auth] Remote Supabase sign up skipped, using secure local registry:', err);
-      }
-    }
-
-    // Check if phone or email is already registered locally
-    const existingUsers = this.getLocalUsers();
-    const cleanPhone = params.phone.replace(/\D/g, '');
-    const alreadyExists = existingUsers.some((u) => {
-      const uPhone = u.phone.replace(/\D/g, '');
-      return uPhone === cleanPhone || (params.email && u.email && u.email.toLowerCase() === params.email.toLowerCase());
-    });
-
-    if (alreadyExists) {
-      return { success: false, error: 'An account with this mobile number or email already exists. Please Sign In.' };
-    }
-
-    const userId = params.role === 'worker' 
-      ? `WKR-${Date.now().toString().slice(-6)}`
-      : `CTR-${Date.now().toString().slice(-6)}`;
-
-    const opaqueToken = this.generateOpaqueToken(params.role === 'worker' ? 'WKR' : 'CTR');
-
-    // Create user profile
-    const newUser: UserProfile = {
-      id: userId,
-      email: params.email?.trim() || undefined,
-      phone: params.phone.trim(),
-      fullName: params.fullName.trim(),
-      role: params.role,
-      trade: params.role === 'worker' ? (params.trade || 'General Construction Worker') : undefined,
-      organizationName: params.role === 'contractor' ? (params.organizationName || 'Independent Contractor') : undefined,
-      contactVerificationStatus: 'number_supplied',
-      manualChecks: [],
-      consentToShareContact: params.consentToShareContact,
-      privacyAccepted: true,
-      qrReferenceToken: opaqueToken,
-      assignedWorkerIds: params.role === 'contractor' ? [] : undefined,
-      createdAt: new Date().toISOString(),
-      isJudgeDemo: false,
-    };
-
-    // Store in local users registry (Password is NOT stored in plain text or local storage)
-    // For local verification, we compute a salted hash in memory
-    const passwordHash = params.password ? await computeSha256Hex(`salt_${userId}_${params.password}`) : '';
-
-    this.saveLocalUser(newUser, passwordHash);
-
-    // Set as active authenticated session
-    this.currentUser = newUser;
-    this.isJudgeDemo = false;
-    this.saveSession(newUser);
-    this.notify();
-
-    return { success: true, user: newUser };
+    if (!this.supabase) return { success: false, error: 'Cloud authentication is not configured. Use explicitly labelled Local Demo Mode.' };
+    if (!['worker', 'contractor'].includes(params.role)) return { success: false, error: 'Unsupported account role.' };
+    if (!params.fullName?.trim() || !params.phone?.trim() || !params.email || !params.password)
+      return { success: false, error: 'Name, phone, email and password are required.' };
+    if (!params.privacyAccepted) return { success: false, error: 'Privacy consent is required.' };
+    const { data, error } = await this.supabase.auth.signUp({ email: params.email.trim(), password: params.password,
+      options: { data: { full_name: params.fullName.trim(), phone: params.phone.trim(), signup_role: params.role }, emailRedirectTo: window.location.origin } });
+    if (error) return { success: false, error: error.message };
+    if (!data.user) return { success: false, error: 'Supabase did not return an account.' };
+    // The requested public role is passed only as signup metadata; the database trigger constrains it to worker/contractor.
+    if (!data.session) return { success: true }; // Email confirmation is enabled; profile is provisioned by the database trigger.
+    await this.loadAuthenticatedProfile(data.user.id);
+    return this.currentUser ? { success: true, user: this.currentUser } : { success: false, error: 'Account created; profile role is not provisioned. Contact support or apply the database migration.' };
   }
 
   /**
    * Sign In with Email or Mobile Number
    */
   public async signIn(params: SignInParams): Promise<{ success: boolean; user?: UserProfile; error?: string }> {
-    const cleanInput = params.loginId.trim();
-    if (!cleanInput) {
-      return { success: false, error: 'Please enter your registered mobile number or email.' };
-    }
-
-    // Handle "Remember my login ID"
-    if (params.rememberMe) {
-      this.setRememberedLoginId(cleanInput);
-    } else {
-      this.clearRememberedLoginId();
-    }
-
-    // Try Supabase Auth when configured and an email address is used. A remote
-    // failure must NOT block local accounts — the registry is the offline-first
-    // source of truth — so the error is held back until the local lookup fails.
-    let remoteUser: any = null;
-    let remoteError: string | null = null;
-    if (this.supabase && cleanInput.includes('@') && params.password) {
-      try {
-        const { data, error } = await this.supabase.auth.signInWithPassword({
-          email: cleanInput,
-          password: params.password,
-        });
-        if (error) {
-          remoteError = error.message;
-        } else {
-          remoteUser = data?.user ?? null;
-        }
-      } catch (err: any) {
-        console.warn('[Auth] Remote Supabase sign in fallback to local registry:', err);
-      }
-    }
-
-    // Check local registry
-    const registry = this.getLocalUsers();
-    const cleanPhoneDigits = cleanInput.replace(/\D/g, '');
-
-    let found = registry.find((u) => {
-      const userPhoneDigits = u.phone.replace(/\D/g, '');
-      const matchPhone = cleanPhoneDigits.length >= 10 && userPhoneDigits.includes(cleanPhoneDigits);
-      const matchEmail = u.email && u.email.toLowerCase() === cleanInput.toLowerCase();
-      const matchId = u.id.toLowerCase() === cleanInput.toLowerCase();
-      return matchPhone || matchEmail || matchId;
-    });
-
-    // Authenticated in Supabase but unknown locally (e.g. signed up on another
-    // device): rebuild the local profile from the Supabase metadata.
-    if (!found && remoteUser) {
-      const meta = (remoteUser.user_metadata || {}) as Record<string, string>;
-      found = {
-        id: remoteUser.id,
-        email: remoteUser.email || cleanInput,
-        phone: meta.phone || '',
-        fullName: meta.full_name || remoteUser.email?.split('@')[0] || 'Registered user',
-        role: meta.role === 'contractor' ? 'contractor' : 'worker',
-        trade: meta.trade || undefined,
-        organizationName: meta.organization_name || undefined,
-        contactVerificationStatus: 'number_supplied',
-        manualChecks: [],
-        consentToShareContact: true,
-        privacyAccepted: true,
-        qrReferenceToken: this.generateOpaqueToken(meta.role === 'contractor' ? 'CTR' : 'WKR'),
-        createdAt: new Date().toISOString(),
-        isJudgeDemo: false,
-      };
-      this.saveLocalUser(found, '');
-    }
-
-    if (!found) {
-      return {
-        success: false,
-        error:
-          remoteError ||
-          'No registered account found with these details. Please create an account or verify your mobile number.',
-      };
-    }
-
-    // Verify password hash if one was registered and provided
-    if (params.password) {
-      const storedCreds = this.getLocalCreds(found.id);
-      if (storedCreds) {
-        const inputHash = await computeSha256Hex(`salt_${found.id}_${params.password}`);
-        if (storedCreds !== inputHash) {
-          return { success: false, error: 'Incorrect password. Please try again or use Password Recovery.' };
-        }
-      }
-    }
-
-    this.currentUser = found;
-    this.isJudgeDemo = false;
-    this.saveSession(found);
-    this.notify();
-
-    return { success: true, user: found };
+    const email = params.loginId.trim();
+    if (params.rememberMe) this.setRememberedLoginId(email); else this.clearRememberedLoginId();
+    if (!this.supabase) return { success: false, error: 'Cloud authentication is not configured. Local accounts are not accepted here; choose Local Demo Mode explicitly.' };
+    if (!email.includes('@') || !params.password) return { success: false, error: 'Use your registered email and password.' };
+    const { data, error } = await this.supabase.auth.signInWithPassword({ email, password: params.password });
+    if (error) return { success: false, error: error.message };
+    await this.loadAuthenticatedProfile(data.user.id);
+    if (!this.currentUser) { await this.supabase.auth.signOut(); return { success: false, error: 'Authenticated user has no valid worker/contractor profile.' }; }
+    return { success: true, user: this.currentUser };
   }
 
   /**
@@ -343,13 +178,9 @@ class AuthService {
       return { success: false, message: 'Please enter a valid email address.' };
     }
 
-    if (this.supabase) {
-      try {
-        await this.supabase.auth.resetPasswordForEmail(email);
-      } catch {
-        // fallback
-      }
-    }
+    if (!this.supabase) return { success: false, message: 'Cloud authentication is not configured.' };
+    const { error } = await this.supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+    if (error) return { success: false, message: error.message };
 
     return {
       success: true,
@@ -469,7 +300,7 @@ class AuthService {
   private saveSession(user: UserProfile): void {
     if (typeof window === 'undefined') return;
     try {
-      window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user));
+      if (this.isJudgeDemo) window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user));
     } catch {
       // ignore
     }
