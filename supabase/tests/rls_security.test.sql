@@ -6,10 +6,10 @@ SELECT plan(27);
 INSERT INTO auth.users (id, aud, role, email, encrypted_password, email_confirmed_at,
   raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 VALUES
- ('10000000-0000-4000-8000-000000000001','authenticated','authenticated','worker-a@test.invalid','',now(),'{}','{"signup_role":"worker","full_name":"Worker A","phone":"100"}',now(),now()),
- ('10000000-0000-4000-8000-000000000002','authenticated','authenticated','worker-b@test.invalid','',now(),'{}','{"signup_role":"worker","full_name":"Worker B","phone":"200"}',now(),now()),
- ('20000000-0000-4000-8000-000000000001','authenticated','authenticated','contractor-a@test.invalid','',now(),'{}','{"signup_role":"contractor","full_name":"Contractor A","phone":"300"}',now(),now()),
- ('20000000-0000-4000-8000-000000000002','authenticated','authenticated','contractor-b@test.invalid','',now(),'{}','{"signup_role":"contractor","full_name":"Contractor B","phone":"400"}',now(),now());
+ ('10000000-0000-4000-8000-000000000001','authenticated','authenticated','worker-a@test.invalid','',now(),'{}','{"signup_role":"worker","full_name":"Worker A"}',now(),now()),
+ ('10000000-0000-4000-8000-000000000002','authenticated','authenticated','worker-b@test.invalid','',now(),'{}','{"signup_role":"worker","full_name":"Worker B"}',now(),now()),
+ ('20000000-0000-4000-8000-000000000001','authenticated','authenticated','contractor-a@test.invalid','',now(),'{}','{"signup_role":"contractor","full_name":"Contractor A"}',now(),now()),
+ ('20000000-0000-4000-8000-000000000002','authenticated','authenticated','contractor-b@test.invalid','',now(),'{}','{"signup_role":"contractor","full_name":"Contractor B"}',now(),now());
 INSERT INTO public.workers (id,user_id,name,trade,skill_level,daily_base_wage_paise)
 VALUES ('W-A','10000000-0000-4000-8000-000000000001','Worker A','Mason','skilled',55000),
        ('W-B','10000000-0000-4000-8000-000000000002','Worker B','Mason','skilled',55000);
