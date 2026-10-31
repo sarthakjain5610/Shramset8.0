@@ -2,6 +2,21 @@
 -- Inspect remote migration history and export/backup data before applying.
 BEGIN;
 
+-- Create new relations before any grants, policies or RLS statements reference them.
+CREATE TABLE IF NOT EXISTS public.contractor_worker_assignments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), worker_id text NOT NULL REFERENCES public.workers(id) ON DELETE RESTRICT,
+  contractor_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(worker_id, contractor_id)
+);
+CREATE TABLE IF NOT EXISTS public.qr_credentials (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  worker_id text NOT NULL REFERENCES public.workers(id) ON DELETE RESTRICT,
+  credential_hash text NOT NULL UNIQUE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  revoked_at timestamptz,
+  replaced_by uuid REFERENCES public.qr_credentials(id) ON DELETE RESTRICT
+);
+
 -- Ordinary signup must not require government identifiers.
 ALTER TABLE public.workers ALTER COLUMN eshram_uan DROP NOT NULL;
 ALTER TABLE public.workers ALTER COLUMN bocw_registration_no DROP NOT NULL;
@@ -61,19 +76,6 @@ CREATE POLICY profile_self_read ON public.profiles FOR SELECT TO authenticated U
 GRANT SELECT ON public.profiles TO authenticated;
 REVOKE UPDATE, DELETE ON public.profiles FROM authenticated;
 
-CREATE TABLE IF NOT EXISTS public.contractor_worker_assignments (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), worker_id text NOT NULL REFERENCES public.workers(id) ON DELETE RESTRICT,
-  contractor_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
-  created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(worker_id, contractor_id)
-);
-CREATE TABLE IF NOT EXISTS public.qr_credentials (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  worker_id text NOT NULL REFERENCES public.workers(id) ON DELETE RESTRICT,
-  credential_hash text NOT NULL UNIQUE,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  revoked_at timestamptz,
-  replaced_by uuid REFERENCES public.qr_credentials(id) ON DELETE RESTRICT
-);
 ALTER TABLE public.qr_credentials ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.qr_credentials FROM PUBLIC, anon, authenticated;
 ALTER TABLE public.contractor_worker_assignments ENABLE ROW LEVEL SECURITY;
