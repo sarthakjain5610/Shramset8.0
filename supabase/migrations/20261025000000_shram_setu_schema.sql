@@ -7,7 +7,7 @@
 -- 1. Profiles & Role Assignment Table
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
-  role VARCHAR(20) NOT NULL CHECK (role IN ('worker', 'contractor', 'auditor', 'admin')),
+  role VARCHAR(20) NOT NULL CHECK (role IN ('worker', 'contractor')),
   full_name TEXT NOT NULL,
   phone VARCHAR(20) NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -34,16 +34,16 @@ CREATE TABLE IF NOT EXISTS public.sites (
 -- 3. Worker Profiles Table
 CREATE TABLE IF NOT EXISTS public.workers (
   id TEXT PRIMARY KEY,
-  user_id UUID REFERENCES auth.users ON DELETE SET NULL,
+  user_id UUID UNIQUE REFERENCES auth.users ON DELETE SET NULL,
   name TEXT NOT NULL,
   hindi_name TEXT,
   phone VARCHAR(20) NOT NULL,
   trade TEXT NOT NULL,
   skill_level VARCHAR(30) NOT NULL CHECK (skill_level IN ('unskilled', 'semi_skilled', 'skilled', 'highly_skilled')),
   daily_base_wage_paise BIGINT NOT NULL CHECK (daily_base_wage_paise > 0),
-  eshram_uan VARCHAR(20) UNIQUE NOT NULL,
-  bocw_registration_no VARCHAR(50) UNIQUE NOT NULL,
-  aadhaar_last4 VARCHAR(4) NOT NULL,
+  eshram_uan VARCHAR(20) UNIQUE,
+  bocw_registration_no VARCHAR(50) UNIQUE,
+  aadhaar_last4 VARCHAR(4),
   blood_group VARCHAR(5),
   active_site_id TEXT REFERENCES public.sites(id) ON DELETE SET NULL,
   bank_account_last4 VARCHAR(4),
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS public.workers (
 -- 4. Attendance Muster Records Table
 CREATE TABLE IF NOT EXISTS public.attendance_records (
   id TEXT PRIMARY KEY,
-  worker_id TEXT REFERENCES public.workers(id) ON DELETE CASCADE NOT NULL,
+  worker_id TEXT REFERENCES public.workers(id) ON DELETE RESTRICT NOT NULL,
   site_id TEXT REFERENCES public.sites(id) ON DELETE RESTRICT NOT NULL,
   date DATE NOT NULL,
   time_in TIME NOT NULL,
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS public.attendance_records (
 -- 5. Wage Ledger Entries Table (All transactions, credits, advances, payouts)
 CREATE TABLE IF NOT EXISTS public.wage_ledger_entries (
   id TEXT PRIMARY KEY,
-  worker_id TEXT REFERENCES public.workers(id) ON DELETE CASCADE NOT NULL,
+  worker_id TEXT REFERENCES public.workers(id) ON DELETE RESTRICT NOT NULL,
   site_id TEXT REFERENCES public.sites(id) ON DELETE RESTRICT NOT NULL,
   date DATE NOT NULL,
   type VARCHAR(30) NOT NULL CHECK (type IN ('daily_credit', 'advance_kharcha', 'weekly_settlement', 'bonus', 'penalty_adjustment', 'deduction')),
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS public.wage_ledger_entries (
 -- 6. Dispute & Grievance Petitions Table
 CREATE TABLE IF NOT EXISTS public.disputes (
   id TEXT PRIMARY KEY,
-  worker_id TEXT REFERENCES public.workers(id) ON DELETE CASCADE NOT NULL,
+  worker_id TEXT REFERENCES public.workers(id) ON DELETE RESTRICT NOT NULL,
   contractor_name TEXT NOT NULL,
   contractor_phone VARCHAR(20) NOT NULL,
   site_name TEXT NOT NULL,
@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS public.disputes (
   description TEXT NOT NULL, -- Worker's claim
   contractor_response TEXT, -- Preserved contractor rebuttal
   contractor_response_date DATE,
-  dlo_filing_ref VARCHAR(50) UNIQUE NOT NULL,
+  dlo_filing_ref VARCHAR(50) UNIQUE,
   evidence_muster_count INT DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -132,8 +132,8 @@ CREATE TABLE IF NOT EXISTS public.audit_events (
 -- 8. Cross-Device Approval Requests Table
 CREATE TABLE IF NOT EXISTS public.approval_requests (
   id TEXT PRIMARY KEY,
-  worker_id TEXT REFERENCES public.workers(id) ON DELETE CASCADE NOT NULL,
-  contractor_id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  worker_id TEXT REFERENCES public.workers(id) ON DELETE RESTRICT NOT NULL,
+  contractor_id UUID REFERENCES auth.users ON DELETE RESTRICT NOT NULL,
   contractor_name TEXT NOT NULL,
   action_type VARCHAR(50) NOT NULL,
   record_id TEXT NOT NULL,
@@ -143,57 +143,17 @@ CREATE TABLE IF NOT EXISTS public.approval_requests (
   responded_at TIMESTAMPTZ
 );
 
--- ============================================================================
--- ROW LEVEL SECURITY (RLS) POLICIES
--- ============================================================================
-
--- Enable RLS on all tables
+-- RLS is enabled in the baseline, but no client policies or grants are created here.
+-- This keeps an incomplete migration sequence fail-closed. The timestamped corrective
+-- migration installs the limited participant policies after all relations exist.
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.workers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.attendance_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.wage_ledger_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.disputes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.approval_requests ENABLE ROW LEVEL SECURITY;
-
--- 1. Profiles Policy: Users can view and manage their own profile
-CREATE POLICY "Users view own profile" 
-  ON public.profiles FOR SELECT 
-  USING (auth.uid() = id);
-
--- 2. Workers Policy: Worker can only view their own record; Contractors can view assigned workers
-CREATE POLICY "Workers view self" 
-  ON public.workers FOR SELECT 
-  USING (auth.uid() = user_id);
-
--- 3. Attendance Records Policy: Worker reads own attendance; Contractor reads site attendance
-CREATE POLICY "Workers read own attendance" 
-  ON public.attendance_records FOR SELECT 
-  USING (EXISTS (SELECT 1 FROM public.workers WHERE workers.id = attendance_records.worker_id AND workers.user_id = auth.uid()));
-
--- 4. Wage Ledger Policy: Worker views own transactions
-CREATE POLICY "Workers view own ledger" 
-  ON public.wage_ledger_entries FOR SELECT 
-  USING (EXISTS (SELECT 1 FROM public.workers WHERE workers.id = wage_ledger_entries.worker_id AND workers.user_id = auth.uid()));
-
--- Worker can update only acknowledgment status on their own entries
-CREATE POLICY "Workers acknowledge payments" 
-  ON public.wage_ledger_entries FOR UPDATE 
-  USING (EXISTS (SELECT 1 FROM public.workers WHERE workers.id = wage_ledger_entries.worker_id AND workers.user_id = auth.uid()))
-  WITH CHECK (acknowledgment_status IN ('acknowledged_by_worker', 'disputed'));
-
--- 5. Disputes Policy: Worker can create and view their own disputes
-CREATE POLICY "Workers manage own disputes" 
-  ON public.disputes FOR ALL 
-  USING (EXISTS (SELECT 1 FROM public.workers WHERE workers.id = disputes.worker_id AND workers.user_id = auth.uid()));
-
--- 6. Audit Events Policy: Read-only for authenticated participants, append-only for verification
-CREATE POLICY "Audit events public read" 
-  ON public.audit_events FOR SELECT 
-  TO authenticated 
-  USING (true);
-
--- 7. Approval Requests: Only target worker can approve/reject
-CREATE POLICY "Target worker manages approval" 
-  ON public.approval_requests FOR UPDATE 
-  USING (EXISTS (SELECT 1 FROM public.workers WHERE workers.id = approval_requests.worker_id AND workers.user_id = auth.uid()));
+REVOKE ALL ON public.profiles, public.sites, public.workers, public.attendance_records,
+  public.wage_ledger_entries, public.disputes, public.audit_events, public.approval_requests
+  FROM PUBLIC, anon, authenticated;

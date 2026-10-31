@@ -9,7 +9,8 @@
  */
 export function buildVerifyUrl(token: string): string {
   const safe = encodeURIComponent(token || '');
-  const fallback = `https://shramsetu.in/#/verify?refToken=${safe}`;
+  const configuredOrigin = import.meta.env?.VITE_APP_URL as string | undefined;
+  const fallback = configuredOrigin ? `${configuredOrigin.replace(/\/$/, '')}/#/verify?refToken=${safe}` : `#/verify?refToken=${safe}`;
 
   if (typeof window === 'undefined') return fallback;
 
@@ -18,5 +19,5 @@ export function buildVerifyUrl(token: string): string {
 
   // Opened from disk (the offline single-file edition): a QR code needs a real
   // absolute URL to be scannable, so point at the canonical public address.
-  return `https://shramsetu.in/#/verify?refToken=${safe}`;
+  return fallback;
 }

@@ -463,10 +463,9 @@ assert(
   'QR payload is a clean, secure verification URL'
 );
 
-// TEST SUITE 12: Role-Based Account Lifecycle & Authorization Scoping
-console.log('\n12. Testing Role-Based Account Lifecycle & Scoping:');
+// TEST SUITE 12: Remote-only authentication and isolated Judge Demo
+console.log('\n12. Testing authentication fallback prevention and demo isolation:');
 
-// Provide localStorage shim for headless test bench
 if (!globalThis.localStorage) {
   const store: Record<string, string> = {};
   (globalThis as any).localStorage = {
@@ -477,170 +476,22 @@ if (!globalThis.localStorage) {
   };
 }
 (globalThis as any).window = globalThis;
+localStorage.setItem('shramset_auth_active_user', JSON.stringify({ id: 'spoofed', role: 'admin', fullName: 'Forged' }));
+localStorage.setItem('shramsetu_registered_users_registry', JSON.stringify([{ id: 'LOCAL-WORKER', role: 'worker', fullName: 'Local Only', phone: '9999999999', email: 'local@example.test' }]));
+const { auth } = await import('../src/services/auth');
 
-import { auth } from '../src/services/auth';
-import QRCode from 'qrcode';
-import jsQR from 'jsqr';
-
-// Test Worker Registration
-const workerRegRes = await auth.signUp({
-  role: 'worker',
-  fullName: 'Arjun Singh Patel',
-  phone: '+91 98260 55123',
-  email: 'arjun.worker@example.com',
-  password: 'SecurePassword123!',
-  trade: 'Site Electrician',
-  consentToShareContact: true,
-  privacyAccepted: true,
-});
-
-assert(workerRegRes.success && !!workerRegRes.user, 'Worker successfully registered through auth service');
-const regWorker = workerRegRes.user!;
-assert(regWorker.role === 'worker', 'Registered user role is strictly "worker"');
-assert(regWorker.qrReferenceToken.startsWith('WKR-'), 'Worker receives opaque QR token starting with WKR-');
-
-// Test that newly registered worker does NOT inherit seeded demo attendance
-const newWorkerAttendance = db.getAttendance(regWorker.id);
-assert(
-  newWorkerAttendance.length === 0,
-  'Newly registered worker starts with clean state (0 attendance records, no demo data leak)',
-  `Got: ${newWorkerAttendance.length} records`
-);
-
-// Test Contractor Registration
-const contractorRegRes = await auth.signUp({
-  role: 'contractor',
-  fullName: 'Rajesh Sharma',
-  phone: '+91 94250 99887',
-  email: 'rajesh.contractor@infra.com',
-  password: 'ContractorPass456!',
-  organizationName: 'Malwa Civil Projects Pvt Ltd',
-  consentToShareContact: true,
-  privacyAccepted: true,
-});
-
-assert(contractorRegRes.success && !!contractorRegRes.user, 'Contractor successfully registered through auth service');
-const regContractor = contractorRegRes.user!;
-assert(regContractor.role === 'contractor', 'Registered user role is strictly "contractor"');
-
-// Test that passwords are NEVER stored in localStorage or user profile
-const storedSession = localStorage.getItem('shramsetu_auth_active_user');
-assert(
-  !storedSession?.includes('SecurePassword123!') && !storedSession?.includes('ContractorPass456!'),
-  'Plain text passwords are NEVER stored in localStorage session or client database'
-);
-
-// Test Sign Out preserves data without deleting users or database
+assert(!auth.getAuthState().isAuthenticated, 'Locally stored profile cannot restore an authenticated session');
+const badLogin = await auth.signIn({ loginId: 'local@example.test', password: 'known-or-guessed' });
+assert(!badLogin.success && !auth.getAuthState().isAuthenticated, 'Local registry login is rejected when remote auth is unavailable');
+const failedSignup = await auth.signUp({ role: 'worker', fullName: 'Test Worker', phone: '+919999999999', email: 'test@example.test', password: 'Password123!', consentToShareContact: true, privacyAccepted: true });
+assert(!failedSignup.success && !failedSignup.user, 'Failed remote registration does not create or authenticate a local real account');
+assert(auth.getLocalUsers().some((u) => u.id === 'LOCAL-WORKER'), 'Legacy local registry may remain stored but is not authoritative');
 await auth.signOut();
-const stateAfterSignOut = auth.getAuthState();
-assert(!stateAfterSignOut.isAuthenticated && stateAfterSignOut.user === null, 'Sign out clears session and sets isAuthenticated: false');
-assert(db.getWorkers().length >= 5, 'Signing out preserves database records without resetting database');
-
-// TEST SUITE 13: Mobile Number Lifecycle & Manual Contact Verification
-console.log('\n13. Testing Contact Verification Lifecycle & Cross-Checks:');
-
-// Status 1: number_supplied initially
-assert(
-  regWorker.contactVerificationStatus === 'number_supplied',
-  'Newly registered user starts in "number_supplied" state (not marked verified by form entry alone)'
-);
-
-// Sign back in as contractor to record manual check
-await auth.signIn({ loginId: 'rajesh.contractor@infra.com', password: 'ContractorPass456!' });
-
-// Contractor executes personal telephonic cross-check
-const checkResult = auth.recordManualContactCheck(
-  regWorker.id,
-  regWorker.phone,
-  'confirmed_match',
-  'Called worker directly on phone. Confirmed electrician credentials and site availability.'
-);
-
-assert(!!checkResult, 'Authorized contractor can record mutual manual contact cross-check');
-assert(checkResult?.outcome === 'confirmed_match', 'Reported outcome is confirmed_match');
-assert(checkResult?.checkedByUserId === regContractor.id, 'Check records who performed the check');
-assert(!!checkResult?.checkedAt, 'Check records authoritative timestamp');
-
-// Verify updated user state in registry
-const updatedUsers = auth.getLocalUsers();
-const targetWorkerAfterCheck = updatedUsers.find((u) => u.id === regWorker.id);
-assert(
-  targetWorkerAfterCheck?.contactVerificationStatus === 'manual_check_completed',
-  'Target user contactVerificationStatus transitioned to "manual_check_completed"'
-);
-
-// TEST SUITE 14: Genuine QR Code Matrix Encoding, Decoding via jsQR & Approval Workflow
-console.log('\n14. Testing Real QR Encoding, jsQR Decoding & Cross-Device Approval:');
-
-const workerOpaqueUrl = `https://shramsetu.in/#verify?refToken=${encodeURIComponent(regWorker.qrReferenceToken)}`;
-const qrCodeModel = QRCode.create(workerOpaqueUrl, { errorCorrectionLevel: 'M' });
-const qrSize = qrCodeModel.modules.size;
-const qrData = qrCodeModel.modules.data; // byte array of 0s and 1s
-
-// Convert to RGBA for jsQR decoder
-const rgbaBuffer = new Uint8ClampedArray(qrSize * qrSize * 4);
-for (let y = 0; y < qrSize; y++) {
-  for (let x = 0; x < qrSize; x++) {
-    const isDark = qrData[y * qrSize + x] === 1;
-    const offset = (y * qrSize + x) * 4;
-    const color = isDark ? 0 : 255;
-    rgbaBuffer[offset] = color;     // R
-    rgbaBuffer[offset + 1] = color; // G
-    rgbaBuffer[offset + 2] = color; // B
-    rgbaBuffer[offset + 3] = 255;   // A
-  }
-}
-
-// Decode with real jsQR decoder
-const decoded = jsQR(rgbaBuffer, qrSize, qrSize);
-assert(Boolean(decoded && decoded.data === workerOpaqueUrl), 'Real QR decoder (jsQR) successfully decodes generated QR code', `Decoded: ${decoded?.data}`);
-assert(Boolean(decoded && !decoded.data.includes(regWorker.phone)), 'Decoded QR URL contains zero phone numbers');
-assert(Boolean(decoded && (decoded.data.includes('refToken=') || decoded.data.includes('WKR-'))), 'Decoded QR URL contains valid opaque reference parameter');
-
-// Test Cross-Device Approval Workflow
-const issuedReqId = `REQ-TEST-${Date.now()}`;
-db.addApprovalRequest({
-  id: issuedReqId,
-  workerId: regWorker.id,
-  workerName: regWorker.fullName,
-  workerReferenceToken: regWorker.qrReferenceToken,
-  contractorId: regContractor.id,
-  contractorName: regContractor.fullName,
-  contractorPhone: regContractor.phone,
-  siteName: 'Indore Metro Line 3 Viaduct Package',
-  actionType: 'attendance_confirmation',
-  recordId: 'ATT-CONF-TEST',
-  shiftDate: '2026-10-25',
-  shiftType: 'full_day',
-  hours: 8,
-  agreedWage: 600,
-  amount: 600,
-  status: 'pending',
-  createdAt: new Date().toISOString(),
-});
-
-const pendingRequests = db.getApprovalRequests(regWorker.id);
-assert(
-  pendingRequests.some((r) => r.id === issuedReqId && r.status === 'pending'),
-  'Contractor-issued shift request appears in worker pending requests list'
-);
-
-// Worker approves the request
-const approvedReq = db.updateApprovalRequestStatus(issuedReqId, 'approved', 'Confirmed worked 8h on Sunday');
-assert(approvedReq?.status === 'approved', 'Worker successfully approves the request');
-
-// Verify that approval automatically created verified AttendanceRecord and wage credit
-const attendanceAfterApproval = db.getAttendance(regWorker.id);
-assert(
-  attendanceAfterApproval.length === 1 && attendanceAfterApproval[0].calculatedWage === 600,
-  'Approved request automatically created verified AttendanceRecord with ₹600 wage'
-);
-
-const ledgerAfterApproval = db.getLedger(regWorker.id);
-assert(
-  ledgerAfterApproval.length === 1 && ledgerAfterApproval[0].amount === 600,
-  'Approved request automatically credited ₹600 into worker wage ledger'
-);
+assert(!auth.getAuthState().isAuthenticated, 'Sign-out leaves no authenticated local profile');
+auth.enterJudgeDemo('worker');
+assert(auth.getAuthState().isAuthenticated && auth.getAuthState().isJudgeDemo, 'Judge Demo is explicit and separately marked');
+await auth.signOut();
+assert(!auth.getAuthState().isAuthenticated && !auth.getAuthState().isJudgeDemo, 'Judge Demo sign-out clears demo state');
 
 console.log(`\n===========================================`);
 console.log(`TEST RUN COMPLETED: ${passedTests} / ${totalTests} TESTS PASSED`);

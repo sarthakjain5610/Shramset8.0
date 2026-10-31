@@ -244,24 +244,9 @@ try {
   });
   await flush(160);
 
-  record('Worker sign-up lands in portal', text().includes('Worker account'), `hash=${w.location.hash}`);
-  a11yAudit('worker portal');
-  record('New account starts clean', text().includes('No shift records') || text().includes('Welcome to WurkUp'));
-  record('Portal shows approval tab', text().includes('Approvals'));
-
-  // Tab switching
-  const wagesTab = findByText('button', 'Wages');
-  await click(wagesTab);
-  record('Worker wages tab renders', text().toLowerCase().includes('wage'));
-  const profileTab = findByText('button', 'Profile');
-  await click(profileTab);
-  record('Worker profile tab renders', text().toLowerCase().includes('contact'));
-
-  // Sign out
-  const signOut = findByText('button', 'Sign out');
-  await click(signOut);
-  await flush(120);
-  record('Sign out returns to public site', text().includes('Every shift recorded'), `hash=${w.location.hash}`);
+  record('Real sign-up without cloud credentials is rejected', text().toLowerCase().includes('cloud authentication') || text().toLowerCase().includes('email'));
+  record('Rejected sign-up does not open an authenticated portal', !text().includes('Worker account'));
+  record('Sign-in route remains available after rejected signup', w.location.hash.includes('create-account') || text().toLowerCase().includes('error'));
 
   // ---- Judge demo --------------------------------------------------------
   await goto('#/sign-in');
