@@ -34,6 +34,33 @@ export interface WorkerRatingSummary {
   };
 }
 
+/** Safe worker directory projection used for cloud queries; intentionally excludes phone and private identifiers. */
+export interface CloudWorkerDirectoryRecord {
+  id: string;
+  name: string;
+  hindi_name?: string | null;
+  trade: string;
+  skill_level: SkillLevel;
+  daily_base_wage_paise: number;
+  active_site_id?: string | null;
+  contact_sharing_consent: boolean;
+  created_at: string;
+}
+
+/** Returned only by the authenticated worker's private-data RPC, never contractor/QR queries. */
+export interface WorkerPrivateDataRecord {
+  worker_id: string;
+  phone?: string | null;
+  eshram_uan?: string | null;
+  bocw_registration_no?: string | null;
+  aadhaar_last4?: string | null;
+  bank_account_last4?: string | null;
+  ifsc_code?: string | null;
+  upi_id?: string | null;
+  blood_group?: string | null;
+}
+
+/** Local/demo domain record. Do not use this shape for contractor-visible cloud query results. */
 export interface Worker {
   id: string;
   name: string;
