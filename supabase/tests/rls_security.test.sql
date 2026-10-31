@@ -31,6 +31,6 @@ SELECT set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000002'
 SELECT is((SELECT count(*)::int FROM public.workers),1,'Worker B sees only own row');
 SELECT throws_ok($$INSERT INTO public.contractor_worker_assignments(worker_id,contractor_id) VALUES ('W-B','20000000-0000-4000-8000-000000000002')$$,'42501',NULL,'Contractor cannot self-assign workers through direct table mutation');
 SELECT throws_ok($$UPDATE public.wage_ledger_entries SET acknowledgment_status='acknowledged_by_worker' WHERE worker_id='W-A'$$,'42501',NULL,'Worker cannot bypass payment acknowledgment operation');
-SELECT is((SELECT count(*)::int FROM public.audit_events),0,'Authenticated users cannot read unrestricted audit events');
+SELECT throws_ok($$SELECT * FROM public.audit_events$$,'42501',NULL,'Authenticated users cannot SELECT audit events');
 SELECT * FROM finish();
 ROLLBACK;
