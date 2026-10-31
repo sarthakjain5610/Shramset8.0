@@ -10,9 +10,9 @@ VALUES
  ('10000000-0000-4000-8000-000000000002','authenticated','authenticated','worker-b@test.invalid','',now(),'{}','{"signup_role":"worker","full_name":"Worker B","phone":"200"}',now(),now()),
  ('20000000-0000-4000-8000-000000000001','authenticated','authenticated','contractor-a@test.invalid','',now(),'{}','{"signup_role":"contractor","full_name":"Contractor A","phone":"300"}',now(),now()),
  ('20000000-0000-4000-8000-000000000002','authenticated','authenticated','contractor-b@test.invalid','',now(),'{}','{"signup_role":"contractor","full_name":"Contractor B","phone":"400"}',now(),now());
-INSERT INTO public.workers (id,user_id,name,phone,trade,skill_level,daily_base_wage_paise)
-VALUES ('W-A','10000000-0000-4000-8000-000000000001','Worker A','100','Mason','skilled',55000),
-       ('W-B','10000000-0000-4000-8000-000000000002','Worker B','200','Mason','skilled',55000);
+INSERT INTO public.workers (id,user_id,name,trade,skill_level,daily_base_wage_paise)
+VALUES ('W-A','10000000-0000-4000-8000-000000000001','Worker A','Mason','skilled',55000),
+       ('W-B','10000000-0000-4000-8000-000000000002','Worker B','Mason','skilled',55000);
 INSERT INTO public.worker_private_data (worker_id, phone, eshram_uan, bocw_registration_no, aadhaar_last4, bank_account_last4, ifsc_code, upi_id, blood_group)
 VALUES ('W-A','1111111111','UAN-PRIVATE-A','BOCW-PRIVATE-A','1111','2222','IFSC-PRIVATE-A','upi-private-a','B+'),
        ('W-B','2222222222','UAN-PRIVATE-B','BOCW-PRIVATE-B','3333','4444','IFSC-PRIVATE-B','upi-private-b','O+');
