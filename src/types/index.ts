@@ -41,7 +41,7 @@ export interface CloudWorkerDirectoryRecord {
   hindi_name?: string | null;
   trade: string;
   skill_level: SkillLevel;
-  daily_base_wage_paise: number;
+  daily_base_wage_paise: number | null;
   active_site_id?: string | null;
   contact_sharing_consent: boolean;
   created_at: string;
