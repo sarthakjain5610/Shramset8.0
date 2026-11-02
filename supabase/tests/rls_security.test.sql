@@ -1,6 +1,6 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
-SELECT plan(43);
+SELECT plan(64);
 
 -- Synthetic identities only; this test never targets production user records.
 INSERT INTO auth.users (id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -8,6 +8,7 @@ INSERT INTO auth.users (id, aud, role, email, encrypted_password, email_confirme
 VALUES
  ('10000000-0000-4000-8000-000000000001','authenticated','authenticated','worker-a@test.invalid','',now(),'{}','{"signup_role":"worker","full_name":"Worker A"}',now(),now()),
  ('10000000-0000-4000-8000-000000000002','authenticated','authenticated','worker-b@test.invalid','',now(),'{}','{"signup_role":"worker","full_name":"Worker B"}',now(),now()),
+ ('10000000-0000-4000-8000-000000000003','authenticated','authenticated','worker-c@test.invalid','',now(),'{}','{"signup_role":"worker","full_name":"Worker C","phone":"3333333333"}',now(),now()),
  ('20000000-0000-4000-8000-000000000001','authenticated','authenticated','contractor-a@test.invalid','',now(),'{}','{"signup_role":"contractor","full_name":"Contractor A"}',now(),now()),
  ('20000000-0000-4000-8000-000000000002','authenticated','authenticated','contractor-b@test.invalid','',now(),'{}','{"signup_role":"contractor","full_name":"Contractor B"}',now(),now());
 INSERT INTO public.workers (id,user_id,name,trade,skill_level,daily_base_wage_paise)
@@ -75,6 +76,45 @@ SELECT throws_ok($$SELECT * FROM public.worker_private_data$$,'42501',NULL,'Anon
 SELECT throws_ok($$SELECT * FROM public.qr_credentials$$,'42501',NULL,'Anonymous users cannot query QR credential storage');
 SELECT throws_ok($$SELECT * FROM public.get_worker_private_data('W-A')$$,'42501',NULL,'Anonymous users cannot execute worker private data RPC');
 SELECT throws_ok($$SELECT * FROM public.get_assigned_worker_contact('W-A')$$,'42501',NULL,'Public QR/anonymous lookup cannot execute contact-returning RPC');
+RESET ROLE;
+
+-- Secure self-onboarding: identity and contact are profile-derived; only trade
+-- and skill are caller inputs. Worker C has no worker row before this section.
+SELECT ok((SELECT p.proconfig @> ARRAY['search_path=pg_catalog']::text[] FROM pg_catalog.pg_proc p WHERE p.oid='public.complete_my_worker_onboarding(text,text)'::regprocedure),'onboarding RPC pins search_path to pg_catalog');
+SELECT is((SELECT pg_catalog.pg_get_userbyid(p.proowner) FROM pg_catalog.pg_proc p WHERE p.oid='public.complete_my_worker_onboarding(text,text)'::regprocedure),'postgres','onboarding RPC is owned by postgres');
+SELECT ok(pg_catalog.has_function_privilege('authenticated','public.complete_my_worker_onboarding(text,text)','EXECUTE'),'authenticated role can invoke onboarding RPC');
+SELECT ok(NOT pg_catalog.has_function_privilege('anon','public.complete_my_worker_onboarding(text,text)','EXECUTE'),'anonymous role cannot invoke onboarding RPC');
+SELECT ok((SELECT p.pronargs=2 AND p.proargnames[1:2]=ARRAY['p_trade','p_skill_level']::text[] FROM pg_catalog.pg_proc p WHERE p.oid='public.complete_my_worker_onboarding(text,text)'::regprocedure),'RPC accepts only trade and skill, not caller-supplied identity or ownership');
+SELECT ok((SELECT NOT a.attnotnull FROM pg_catalog.pg_attribute a WHERE a.attrelid='public.workers'::regclass AND a.attname='daily_base_wage_paise' AND NOT a.attisdropped),'worker daily wage is nullable for unassigned workers');
+
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.role','authenticated',true);
+SELECT set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000003',true);
+SELECT throws_ok($$SELECT * FROM public.complete_my_worker_onboarding('Unlisted trade','skilled')$$,'22023',NULL,'onboarding rejects trade outside the approved list');
+SELECT throws_ok($$SELECT * FROM public.complete_my_worker_onboarding('Carpenter & Shuttering (शटरिंग बढ़ई)','expert')$$,'22023',NULL,'onboarding rejects invalid skill levels');
+SELECT lives_ok($$SELECT * FROM public.complete_my_worker_onboarding('Carpenter & Shuttering (शटरिंग बढ़ई)','skilled')$$,'worker can create their own profile through onboarding RPC');
+SELECT set_config('test.worker_id',(SELECT worker_id FROM public.complete_my_worker_onboarding('Head Mason (मुख्य राजमिस्त्री)','unskilled')),true);
+SELECT is((SELECT worker_id FROM public.complete_my_worker_onboarding('Painter & Putty Applicator (पेंटर)','highly_skilled')),current_setting('test.worker_id'),'repeated onboarding safely returns the same worker record');
+RESET ROLE;
+SELECT is((SELECT count(*)::int FROM public.workers WHERE user_id='10000000-0000-4000-8000-000000000003'),1,'onboarding creates exactly one worker linked to the caller');
+SELECT is((SELECT user_id::text FROM public.workers WHERE id=current_setting('test.worker_id')),'10000000-0000-4000-8000-000000000003','worker ownership is derived from the authenticated identity');
+SELECT is((SELECT name || '|' || trade || '|' || skill_level FROM public.workers WHERE id=current_setting('test.worker_id')),'Worker C|Carpenter & Shuttering (शटरिंग बढ़ई)|skilled','worker name comes from profiles and only validated trade/skill are used');
+SELECT ok((SELECT daily_base_wage_paise IS NULL FROM public.workers WHERE id=current_setting('test.worker_id')),'new worker wage remains NULL rather than a fabricated amount');
+SELECT is((SELECT phone::text FROM public.worker_private_data WHERE worker_id=current_setting('test.worker_id')),'3333333333','private phone is copied from the authenticated profile');
+SELECT ok(NOT EXISTS (SELECT 1 FROM pg_catalog.pg_attribute a WHERE a.attrelid='public.workers'::regclass AND a.attname='phone' AND NOT a.attisdropped),'private phone is absent from contractor-readable worker directory columns');
+SELECT is((SELECT count(*)::int FROM public.contractor_worker_assignments WHERE worker_id=current_setting('test.worker_id')),0,'onboarding does not create a contractor assignment');
+
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.role','authenticated',true);
+SELECT set_config('request.jwt.claim.sub','20000000-0000-4000-8000-000000000001',true);
+SELECT throws_ok($$SELECT * FROM public.complete_my_worker_onboarding('Carpenter & Shuttering (शटरिंग बढ़ई)','skilled')$$,'42501',NULL,'contractor cannot invoke worker onboarding');
+SELECT is((SELECT count(*)::int FROM public.workers WHERE id=current_setting('test.worker_id')),0,'contractors cannot see the new worker without an assignment');
+RESET ROLE;
+SELECT is((SELECT count(*)::int FROM public.workers WHERE user_id='10000000-0000-4000-8000-000000000003'),1,'rejected contractor request creates no worker rows');
+
+SET LOCAL ROLE anon;
+SELECT set_config('request.jwt.claim.role','anon',true);
+SELECT throws_ok($$SELECT * FROM public.complete_my_worker_onboarding('Carpenter & Shuttering (शटरिंग बढ़ई)','skilled')$$,'42501',NULL,'anonymous users cannot invoke worker onboarding');
 RESET ROLE;
 SELECT * FROM finish();
 ROLLBACK;

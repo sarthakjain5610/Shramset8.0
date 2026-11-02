@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle2, Cloud, LoaderCircle, LockKeyhole, RefreshCw, ShieldCheck, WifiOff } from 'lucide-react';
-import { UserProfile, CloudWorkerDirectoryRecord, WorkerPrivateDataRecord } from '../../types';
-import { getMyWorkerPrivateData, getWorkerDirectory, setMyWorkerContactSharing } from '../../services/workerCloudData';
+import { UserProfile, CloudWorkerDirectoryRecord, WorkerPrivateDataRecord, SkillLevel } from '../../types';
+import { completeMyWorkerOnboarding, getMyWorkerPrivateData, getWorkerDirectory, setMyWorkerContactSharing } from '../../services/workerCloudData';
 
 interface Props { user: UserProfile }
 
@@ -13,6 +13,11 @@ export const WorkerCloudWorkspace: React.FC<Props> = ({ user }) => {
   const [error, setError] = useState<string | null>(null);
   const [consentBusy, setConsentBusy] = useState(false);
   const [online, setOnline] = useState(typeof navigator === 'undefined' || navigator.onLine);
+  const [hasNoWorkerRecord, setHasNoWorkerRecord] = useState(false);
+  const [onboardingTrade, setOnboardingTrade] = useState('');
+  const [onboardingSkill, setOnboardingSkill] = useState<SkillLevel>('unskilled');
+  const [onboardingBusy, setOnboardingBusy] = useState(false);
+  const [onboardingSuccess, setOnboardingSuccess] = useState(false);
 
   useEffect(() => {
     const onOnline = () => setOnline(true);
@@ -27,10 +32,14 @@ export const WorkerCloudWorkspace: React.FC<Props> = ({ user }) => {
     setError(null);
     setWorker(null);
     setPrivateData(null);
+    setHasNoWorkerRecord(false);
     try {
       if (typeof navigator !== 'undefined' && !navigator.onLine) throw new Error('You are offline. No cloud data is available in this session; demo data is not shown for real accounts.');
       const rows = await getWorkerDirectory();
-      if (rows.length === 0) return;
+      if (rows.length === 0) {
+        setHasNoWorkerRecord(true);
+        return;
+      }
       if (rows.length !== 1) throw new Error('More than one worker directory record is visible to this account. For safety, no record was selected. Contact support.');
       const row = rows[0];
       // This RPC verifies both worker role and worker.user_id = auth.uid(). Do not
@@ -47,6 +56,31 @@ export const WorkerCloudWorkspace: React.FC<Props> = ({ user }) => {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  const submitOnboarding = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (onboardingBusy || !onboardingTrade || !online) return;
+    setOnboardingBusy(true);
+    setError(null);
+    setOnboardingSuccess(false);
+    try {
+      // The RPC accepts only trade and skill; name, phone and ownership are resolved
+      // server-side from this authenticated user's own profiles row.
+      const workerId = await completeMyWorkerOnboarding(onboardingTrade, onboardingSkill);
+      const rows = await getWorkerDirectory();
+      const ownRecord = rows.filter((row) => row.id === workerId);
+      if (ownRecord.length !== 1) throw new Error('Supabase accepted onboarding but did not return exactly one authorized worker directory record. Refresh and retry if needed.');
+      const ownPrivateData = await getMyWorkerPrivateData(workerId);
+      setWorker(ownRecord[0]);
+      setPrivateData(ownPrivateData);
+      setHasNoWorkerRecord(false);
+      setOnboardingSuccess(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Worker onboarding could not be confirmed. Please retry.');
+    } finally {
+      setOnboardingBusy(false);
+    }
+  };
 
   const updateConsent = async () => {
     if (!worker || consentBusy) return;
@@ -79,11 +113,12 @@ export const WorkerCloudWorkspace: React.FC<Props> = ({ user }) => {
       </header>
       {!online && <div role="status" className="flex gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950"><WifiOff size={18} className="shrink-0"/>Offline. This account has no local cloud-data cache; demo records will not be substituted.</div>}
       {error && <div role="alert" className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"><AlertCircle size={18} className="mt-0.5 shrink-0"/><span>{error}</span></div>}
+      {onboardingSuccess && <div role="status" className="flex items-start gap-2 rounded-xl border border-forest-200 bg-forest-50 p-4 text-sm text-forest-900"><CheckCircle2 size={18} className="mt-0.5 shrink-0"/><span>Your worker profile was confirmed by Supabase. Wage is not assigned yet, and no contractor assignment was created.</span></div>}
       {loading ? <div className="flex items-center gap-2 rounded-2xl border border-sand-200 bg-white p-8 text-sm text-ink-600"><LoaderCircle size={18} className="animate-spin"/>Loading your authorized cloud profile…</div> : worker ? <>
         <section className="rounded-2xl border border-sand-200 bg-white p-5 shadow-sm sm:p-7">
           <div className="mb-5 flex items-center gap-3"><div className="rounded-xl bg-forest-50 p-2.5 text-forest-800"><ShieldCheck size={22}/></div><div><h2 className="font-bold text-ink-950">Worker directory profile</h2><p className="text-xs text-ink-500">Visible fields from your RLS-authorized worker record</p></div></div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Field label="Name" value={worker.name}/><Field label="Trade" value={worker.trade}/><Field label="Skill level" value={worker.skill_level}/><Field label="Daily base wage" value={`₹${(worker.daily_base_wage_paise / 100).toLocaleString('en-IN')}`}/><Field label="Active site reference" value={worker.active_site_id || 'Not assigned'}/><Field label="Worker record" value={worker.id}/>
+            <Field label="Name" value={worker.name}/><Field label="Trade" value={worker.trade}/><Field label="Skill level" value={worker.skill_level}/><Field label="Daily base wage" value={worker.daily_base_wage_paise == null ? 'Wage not assigned yet' : `₹${(worker.daily_base_wage_paise / 100).toLocaleString('en-IN')}`}/><Field label="Active site reference" value={worker.active_site_id || 'Not assigned'}/><Field label="Worker record" value={worker.id}/>
           </div>
         </section>
         <section className="rounded-2xl border border-sand-200 bg-white p-5 shadow-sm sm:p-7">
@@ -97,7 +132,30 @@ export const WorkerCloudWorkspace: React.FC<Props> = ({ user }) => {
             </button>
           </div>
         </section>
-      </> : !error && !loading ? <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6"><h2 className="font-bold text-amber-950">No linked worker record</h2><p className="mt-2 text-sm text-amber-900">Your authenticated account has no worker directory row visible under its current Supabase policies. No profile or private details have been fabricated. Ask your administrator to link your worker record.</p></section> : null}
+      </> : !loading && hasNoWorkerRecord ? <section className="rounded-2xl border border-sand-200 bg-white p-5 shadow-sm sm:p-7"><div className="mb-5"><h2 className="font-bold text-ink-950">Complete your worker profile</h2><p className="mt-1 text-sm text-ink-600">Choose your trade and skill level. Your name and phone come from your verified account profile. You will not be assigned a wage or contractor here.</p></div>
+        <form onSubmit={submitOnboarding} className="space-y-4">
+          <label className="block text-sm font-semibold text-ink-800">Trade
+            <select required value={onboardingTrade} onChange={(event) => setOnboardingTrade(event.target.value)} className="mt-1.5 block w-full rounded-xl border border-sand-300 bg-white px-3 py-2.5 text-sm font-normal text-ink-900 focus:border-forest-500 focus:outline-none focus:ring-2 focus:ring-forest-200">
+              <option value="">Select a trade</option>
+              <option>Head Mason (मुख्य राजमिस्त्री)</option>
+              <option>Steel Binder &amp; Rigging Helper (सरिया बाइंडर)</option>
+              <option>Site Electrician &amp; Cable Jointer (साइट इलेक्ट्रीशियन)</option>
+              <option>General Helper &amp; Concrete Batching (बेलदार)</option>
+              <option>Tile Grinding &amp; Surface Polisher (फिनिशिंग)</option>
+              <option>Carpenter &amp; Shuttering (शटरिंग बढ़ई)</option>
+              <option>Plumber &amp; Pipe Fitter (प्लंबर)</option>
+              <option>Painter &amp; Putty Applicator (पेंटर)</option>
+            </select>
+          </label>
+          <label className="block text-sm font-semibold text-ink-800">Skill level
+            <select value={onboardingSkill} onChange={(event) => setOnboardingSkill(event.target.value as SkillLevel)} className="mt-1.5 block w-full rounded-xl border border-sand-300 bg-white px-3 py-2.5 text-sm font-normal text-ink-900 focus:border-forest-500 focus:outline-none focus:ring-2 focus:ring-forest-200">
+              <option value="unskilled">Unskilled</option><option value="semi_skilled">Semi-skilled</option><option value="skilled">Skilled</option><option value="highly_skilled">Highly skilled</option>
+            </select>
+          </label>
+          <p className="rounded-lg bg-sand-50 p-3 text-xs text-ink-600">This creates only your worker record and private phone record. It does not create a contractor assignment or set a wage.</p>
+          <button type="submit" disabled={!online || onboardingBusy || !onboardingTrade} className="inline-flex items-center gap-2 rounded-xl bg-forest-800 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{onboardingBusy ? <><LoaderCircle size={16} className="animate-spin"/>Submitting to Supabase…</> : 'Create worker profile'}</button>
+        </form>
+      </section> : null}
       <section className="rounded-2xl border border-sand-200 bg-white p-5 text-sm text-ink-700"><p className="font-bold text-ink-900">Other workflows</p><p className="mt-1">Attendance, wage changes, payment acknowledgments, approvals and disputes are not connected to an authorized cloud operation yet. They are not written locally from this real account. Demo/offline sample workflows remain separate.</p></section>
       <button type="button" onClick={() => void load(true)} disabled={loading || refreshing} className="inline-flex items-center gap-2 rounded-xl border border-sand-300 bg-white px-4 py-2 text-sm font-semibold text-ink-800 disabled:opacity-50"><RefreshCw size={15} className={refreshing ? 'animate-spin' : ''}/>Refresh cloud data</button>
     </div>
