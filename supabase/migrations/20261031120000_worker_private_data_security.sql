@@ -65,7 +65,7 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = pg_catalog, public, auth
+SET search_path = pg_catalog
 AS $$
 BEGIN
   IF auth.uid() IS NULL OR NOT EXISTS (
@@ -95,7 +95,7 @@ CREATE OR REPLACE FUNCTION public.get_assigned_worker_contact(p_worker_id text)
 RETURNS TABLE (worker_id text, phone varchar)
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = pg_catalog, public, auth
+SET search_path = pg_catalog
 AS $$
 BEGIN
   IF auth.uid() IS NULL OR NOT EXISTS (
@@ -122,7 +122,7 @@ CREATE OR REPLACE FUNCTION public.set_my_worker_contact_sharing(p_enabled boolea
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = pg_catalog, public, auth
+SET search_path = pg_catalog
 AS $$
 BEGIN
   IF auth.uid() IS NULL OR NOT EXISTS (

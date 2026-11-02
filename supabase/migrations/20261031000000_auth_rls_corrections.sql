@@ -38,7 +38,7 @@ ALTER TABLE public.profiles ADD CONSTRAINT profiles_role_check CHECK (role IN ('
 -- Server-side profile provisioning. A trusted auth.users trigger creates profiles;
 -- clients cannot create or alter privileged roles. Only constrained public roles are accepted.
 CREATE OR REPLACE FUNCTION public.provision_shram_profile()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, auth AS $$
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog AS $$
 DECLARE requested_role text;
 BEGIN
   requested_role := NEW.raw_user_meta_data->>'signup_role';
