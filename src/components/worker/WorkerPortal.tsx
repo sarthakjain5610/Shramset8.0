@@ -30,6 +30,7 @@ import { QRCodeDisplay } from '../QRCodeDisplay';
 import { WorkerCard } from '../WorkerCard';
 import { ContactVerificationModal } from '../ContactVerificationModal';
 import { buildVerifyUrl } from '../../services/verifyLink';
+import { WorkerCloudWorkspace } from './WorkerCloudWorkspace';
 
 interface WorkerPortalProps {
   user: UserProfile;
@@ -37,7 +38,7 @@ interface WorkerPortalProps {
   onNavigateHome: () => void;
 }
 
-export const WorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateHome }) => {
+const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateHome }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'records' | 'wages' | 'qr' | 'approvals' | 'disputes' | 'profile'>('overview');
   
   // Scoped Data State
@@ -984,3 +985,8 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNaviga
     </div>
   );
 };
+
+/** Real accounts use the RLS/RPC-backed workspace; synthetic records remain demo-only. */
+export const WorkerPortal: React.FC<WorkerPortalProps> = (props) => props.user.isJudgeDemo
+  ? <DemoWorkerPortal {...props} />
+  : <WorkerCloudWorkspace user={props.user} />;

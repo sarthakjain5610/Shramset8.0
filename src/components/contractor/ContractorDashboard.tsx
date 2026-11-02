@@ -33,13 +33,14 @@ import { evaluateAnomalies } from '../../services/anomalyEngine';
 import { calculateRecordBreakdown } from '../../services/wageEngine';
 import { ContactVerificationModal } from '../ContactVerificationModal';
 import jsQR from 'jsqr';
+import { ContractorCloudWorkspace } from './ContractorCloudWorkspace';
 
 interface ContractorDashboardProps {
   user: UserProfile;
   lang: Language;
 }
 
-export const ContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lang }) => {
+const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lang }) => {
   const [activeTab, setActiveTab] = useState<
     'dashboard' | 'workers' | 'attendance' | 'ledger' | 'scanner' | 'approvals' | 'disputes' | 'audit' | 'profile'
   >('dashboard');
@@ -1406,3 +1407,8 @@ export const ContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, 
     </div>
   );
 };
+
+/** Keep synthetic IndexedDB workflows isolated from real authenticated contractors. */
+export const ContractorDashboard: React.FC<ContractorDashboardProps> = (props) => props.user.isJudgeDemo
+  ? <DemoContractorDashboard {...props} />
+  : <ContractorCloudWorkspace user={props.user} />;

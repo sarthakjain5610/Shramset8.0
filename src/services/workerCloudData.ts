@@ -21,6 +21,13 @@ export async function getMyWorkerPrivateData(workerId: string): Promise<WorkerPr
   return row as WorkerPrivateDataRecord;
 }
 
+/** The authenticated worker changes their own consent through the protected RPC. */
+export async function setMyWorkerContactSharing(enabled: boolean): Promise<void> {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  const { error } = await supabase.rpc('set_my_worker_contact_sharing', { p_enabled: enabled });
+  if (error) throw new Error(error.message);
+}
+
 /** Contractor contact lookup returns only a consented phone for an assigned worker. */
 export async function getAssignedWorkerContact(workerId: string): Promise<{ worker_id: string; phone: string } | null> {
   if (!supabase) throw new Error('Supabase is not configured.');
