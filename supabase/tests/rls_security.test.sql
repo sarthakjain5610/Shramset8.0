@@ -1,6 +1,6 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
-SELECT plan(27);
+SELECT plan(43);
 
 -- Synthetic identities only; this test never targets production user records.
 INSERT INTO auth.users (id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -18,6 +18,24 @@ VALUES ('W-A','1111111111','UAN-PRIVATE-A','BOCW-PRIVATE-A','1111','2222','IFSC-
        ('W-B','2222222222','UAN-PRIVATE-B','BOCW-PRIVATE-B','3333','4444','IFSC-PRIVATE-B','upi-private-b','O+');
 INSERT INTO public.contractor_worker_assignments(worker_id,contractor_id)
 VALUES ('W-A','20000000-0000-4000-8000-000000000001');
+
+-- SECURITY DEFINER function configuration, ownership and execute ACLs.
+SELECT ok((SELECT p.proconfig @> ARRAY['search_path=pg_catalog']::text[] FROM pg_catalog.pg_proc p WHERE p.oid='public.provision_shram_profile()'::regprocedure),'provision trigger has pg_catalog-only search_path');
+SELECT ok((SELECT p.proconfig @> ARRAY['search_path=pg_catalog']::text[] FROM pg_catalog.pg_proc p WHERE p.oid='public.get_worker_private_data(text)'::regprocedure),'worker private RPC has pg_catalog-only search_path');
+SELECT ok((SELECT p.proconfig @> ARRAY['search_path=pg_catalog']::text[] FROM pg_catalog.pg_proc p WHERE p.oid='public.get_assigned_worker_contact(text)'::regprocedure),'contractor contact RPC has pg_catalog-only search_path');
+SELECT ok((SELECT p.proconfig @> ARRAY['search_path=pg_catalog']::text[] FROM pg_catalog.pg_proc p WHERE p.oid='public.set_my_worker_contact_sharing(boolean)'::regprocedure),'contact consent RPC has pg_catalog-only search_path');
+SELECT is((SELECT pg_catalog.pg_get_userbyid(p.proowner) FROM pg_catalog.pg_proc p WHERE p.oid='public.provision_shram_profile()'::regprocedure),'postgres','provision trigger is owned by postgres');
+SELECT is((SELECT pg_catalog.pg_get_userbyid(p.proowner) FROM pg_catalog.pg_proc p WHERE p.oid='public.get_worker_private_data(text)'::regprocedure),'postgres','worker private RPC is owned by postgres');
+SELECT is((SELECT pg_catalog.pg_get_userbyid(p.proowner) FROM pg_catalog.pg_proc p WHERE p.oid='public.get_assigned_worker_contact(text)'::regprocedure),'postgres','contractor contact RPC is owned by postgres');
+SELECT is((SELECT pg_catalog.pg_get_userbyid(p.proowner) FROM pg_catalog.pg_proc p WHERE p.oid='public.set_my_worker_contact_sharing(boolean)'::regprocedure),'postgres','contact consent RPC is owned by postgres');
+SELECT ok(NOT pg_catalog.has_function_privilege('authenticated','public.provision_shram_profile()','EXECUTE'),'authenticated cannot call trigger function directly');
+SELECT ok(NOT pg_catalog.has_function_privilege('anon','public.provision_shram_profile()','EXECUTE'),'anon cannot execute trigger function');
+SELECT ok(pg_catalog.has_function_privilege('authenticated','public.get_worker_private_data(text)','EXECUTE'),'authenticated can execute worker private RPC');
+SELECT ok(NOT pg_catalog.has_function_privilege('anon','public.get_worker_private_data(text)','EXECUTE'),'anon cannot execute worker private RPC');
+SELECT ok(pg_catalog.has_function_privilege('authenticated','public.get_assigned_worker_contact(text)','EXECUTE'),'authenticated can execute contact RPC');
+SELECT ok(NOT pg_catalog.has_function_privilege('anon','public.get_assigned_worker_contact(text)','EXECUTE'),'anon cannot execute contact RPC');
+SELECT ok(pg_catalog.has_function_privilege('authenticated','public.set_my_worker_contact_sharing(boolean)','EXECUTE'),'authenticated can execute own-consent RPC');
+SELECT ok(NOT pg_catalog.has_function_privilege('anon','public.set_my_worker_contact_sharing(boolean)','EXECUTE'),'anon cannot execute own-consent RPC');
 
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.role','authenticated',true);
