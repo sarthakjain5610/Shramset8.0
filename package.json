@@ -14,7 +14,8 @@
     "test:ui": "tsx scripts/flow-test.ts",
     "test:all": "tsc --noEmit && tsx scripts/run-all-tests.ts && tsx scripts/smoke-render.ts && tsx scripts/flow-test.ts",
     "build:offline": "tsx scripts/build-offline.ts",
-    "test:offline": "tsx scripts/offline-smoke.ts"
+    "test:offline": "tsx scripts/offline-smoke.ts",
+    "test:service-worker": "node scripts/service-worker-preview-smoke.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
