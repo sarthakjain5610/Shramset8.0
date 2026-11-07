@@ -52,6 +52,8 @@ function serviceWorkerHarness() {
   const listeners = new Map();
   const cacheStorage = new MemoryCaches();
   let offline = false;
+  let navigationResponsePath = null;
+  let navigationResponse = null;
   const self = {
     location: new URL(origin),
     clients: { claim: async () => {} },
@@ -64,6 +66,8 @@ function serviceWorkerHarness() {
       method: input.method || 'GET',
       headers: input.headers || {},
     });
+    const requestPath = new URL(request.url).pathname;
+    if (navigationResponse && requestPath === navigationResponsePath) return navigationResponse.clone();
     return fetch(request);
   };
   vm.runInNewContext(fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8'), {
@@ -80,6 +84,10 @@ function serviceWorkerHarness() {
   return {
     cacheStorage,
     setOffline(value) { offline = value; },
+    setNavigationResponse(pathname, response) {
+      navigationResponsePath = pathname;
+      navigationResponse = response;
+    },
     async dispatch(type, request) {
       let responsePromise;
       const waits = [];
@@ -176,20 +184,37 @@ async function run() {
   const hashBrowserUrl = new URL(`${origin}/#/how-it-works`);
   assert.equal(hashBrowserUrl.pathname, '/', 'hash navigation remains a root document request');
   assert.equal(hashBrowserUrl.hash, '#/how-it-works', 'client-side hash route is retained in browser URL');
+
+  const updatedShellText = '<!doctype html><html><body><div id="root" data-shell-version="newer">Updated WurkUp shell</div></body></html>';
+  harness.setNavigationResponse('/', new Response(updatedShellText, {
+    status: 200,
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+  }));
   const onlineNavigation = await harness.dispatch('fetch', swRequest(`${origin}/`, { mode: 'navigate', destination: 'document' }));
   assert.equal(onlineNavigation.status, 200, 'online navigation uses the network-first shell');
   assert.match(onlineNavigation.headers.get('content-type') || '', /text\/html/i, 'navigation receives HTML');
+  assert.equal(await (await currentCache.match('/')).text(), updatedShellText, 'successful root navigation refreshes the cached shell');
 
+  harness.setNavigationResponse('/not-found-route', new Response('<!doctype html><title>Not found</title>', {
+    status: 404,
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+  }));
+  const missingRoute = await harness.dispatch('fetch', swRequest(`${origin}/not-found-route`, { mode: 'navigate', destination: 'document' }));
+  assert.equal(missingRoute.status, 404, 'arbitrary missing route keeps its 404 response');
+  assert.equal(await (await currentCache.match('/')).text(), updatedShellText, 'arbitrary 404 route never replaces the cached root shell');
+
+  harness.setNavigationResponse('/', null);
   harness.setOffline(true);
   const offlineNavigation = await harness.dispatch('fetch', swRequest(`${origin}/`, { mode: 'navigate', destination: 'document' }));
   assert.equal(offlineNavigation.status, 200, 'offline navigation falls back to cached shell');
   assert.match(offlineNavigation.headers.get('content-type') || '', /text\/html/i, 'offline fallback remains HTML');
-  assert.match(await offlineNavigation.text(), /id="root"/, 'offline fallback is the WurkUp app shell');
+  assert.equal(await offlineNavigation.text(), updatedShellText, 'offline navigation serves the latest cached shell');
 
   console.log('PASS homepage and existing JS/CSS preview responses and MIME types');
   console.log('PASS v3→v4 cache upgrade; obsolete WurkUp cache removed, unrelated cache preserved');
   console.log('PASS missing JS/CSS return empty 404 responses, never SPA HTML');
-  console.log('PASS /sw.js, /api and /auth bypass; offline navigation and hash-route shell work');
+  console.log('PASS root navigation refreshes cached shell; arbitrary 404 route does not replace it');
+  console.log('PASS offline navigation serves refreshed shell; /sw.js, /api and /auth bypass; hash routes work');
 }
 
 try {

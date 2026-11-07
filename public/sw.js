@@ -64,7 +64,16 @@ async function cacheShellAsset(cache, asset) {
 
 async function networkFirstNavigation(request, cache) {
   try {
-    return await fetch(request);
+    const response = await fetch(request);
+    const isRootNavigation = new URL(request.url).pathname === '/';
+    if (isRootNavigation && isValid(response, ['text/html'])) {
+      try {
+        await cache.put('/', response.clone());
+      } catch {
+        // Keep the successful network response even if cache storage is unavailable.
+      }
+    }
+    return response;
   } catch {
     const cachedShell = await cache.match('/');
     if (isValid(cachedShell, ['text/html'])) return cachedShell;
