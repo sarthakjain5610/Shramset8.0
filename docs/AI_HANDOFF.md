@@ -6,18 +6,21 @@ _Last verified: 2026-11-07 (Asia/Calcutta). This file contains no credentials or
 
 - Repository: `sarthakjain5610/ShramSet8.0`
 - Latest verified `main`: `4b7e051886160fe185e231c0cead64673bb34188` (merge of PR #8).
-- Active Arena session branch: `arena/895b41a0-shramset8-0`; no code changes made in this handoff task.
-- Open PR: [#9 — Add shared WURK UP AI handoff record](https://github.com/sarthakjain5610/ShramSet8.0/pull/9), from `arena/895b41a0-shramset8-0` to `main`.
-- `docs/AI_HANDOFF.md` was absent and is being added in PR #9 for review.
+- Active Arena session branch: `arena/895b41a0-shramset8-0` (fixed by Arena; the requested feature branch name could not be used).
+- Open PR: [#9 — Add shared WURK UP AI handoff record](https://github.com/sarthakjain5610/ShramSet8.0/pull/9), from `arena/895b41a0-shramset8-0` to `main`; service-worker changes and this updated handoff are being added to that existing PR.
+- `docs/AI_HANDOFF.md` is tracked in PR #9. Latest service-worker patch is local/uncommitted until the next handoff update.
 
 ## Code and tests
 
 - Supabase frontend configuration is read at Vite build time from `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in `src/services/supabase.ts`.
 - `VITE_APP_URL` is also read by `src/services/verifyLink.ts` for generated app links.
-- The application has no checked-in Wrangler config or Wrangler deploy script; Cloudflare Workers Build settings are external to this repository.
+- `wrangler.jsonc` defines the `wurkup` static-assets site with `./dist` and `not_found_handling: "404-page"`; no custom `public/404.html` or `_headers` file was added. Wrangler 4.158.0 `deploy --dry-run` passed and read the built assets; no production deploy was performed.
+- `public/sw.js` now uses `wurkup-shell-v4`: network-first navigation with validated cached-shell fallback, validated shell/JS/CSS/font caching scoped to the current WURK UP cache, cleanup limited to obsolete `wurkup-shell-*` caches, preservation of unrelated caches, and bypass for `/sw.js`, `/api`, and `/auth`. Missing JS/CSS responses that resolve to HTML become empty 404s.
+- `scripts/service-worker-preview-smoke.mjs` and `npm run test:service-worker` exercise preview MIME checks, cache upgrade/preservation, excluded routes, missing assets, offline navigation, and hash routes.
+- `npm run build`, JS syntax checks, `npm run lint`, `npm run test:service-worker`, `npm run test:all` (60 automated tests, 9/9 screen renders, 27/27 flow steps), and `npm run test:offline` (12/12 checks) passed. Build emits the existing >500 kB chunk warning; `test:all` emits its expected missing-translation diagnostic for the deliberate negative test.
 - Main contains the worker onboarding RPC, nullable unassigned-wage behavior, onboarding form, and the corrective onboarding conflict-target migration.
 - The RLS/pgTAP suite declares 64 assertions. The original test run reported an ambiguous `worker_id` conflict target; the follow-up migration uses `ON CONFLICT ON CONSTRAINT worker_private_data_pkey`. A successful post-fix 64-test execution has not been verified by Arena.
-- No application source changes or application tests were run for the configuration audit.
+- No Supabase, RLS, migration, Brevo, Cloudflare dashboard, or unrelated application behavior changes were made.
 
 ## Supabase
 
@@ -29,7 +32,7 @@ _Last verified: 2026-11-07 (Asia/Calcutta). This file contains no credentials or
 
 ## Cloudflare deployment
 
-- Cloudflare/Workers Builds is Claude's exclusive integration responsibility. Arena did not inspect or change Cloudflare settings in this handoff task.
+- Cloudflare/Workers Builds dashboard configuration is Claude's exclusive integration responsibility. Arena did not inspect or change Cloudflare settings for this patch; only the repository Wrangler config was dry-run validated.
 - Previously, Arena's Cloudflare connector lookup returned unsupported. Build variables, API token status, configured build/deploy commands, latest deployment version, and production traffic remain unverified by Arena.
 - The reported production warning is consistent with a Vite build missing or receiving invalid `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY`; this is a source-based diagnosis, not confirmation of current Cloudflare settings or a successful live fix.
 - Required Cloudflare action: Claude/authorized owner verify Workers Builds **Build variables and secrets** (not only runtime bindings), use the production Supabase URL and publishable key, then verify the build/deployment and live site. Do not expose or store key values here.
