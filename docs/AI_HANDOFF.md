@@ -8,7 +8,7 @@ _Last verified: 2026-11-07 (Asia/Calcutta). This file contains no credentials or
 - Latest verified `main`: `4b7e051886160fe185e231c0cead64673bb34188` (merge of PR #8).
 - Active Arena session branch: `arena/895b41a0-shramset8-0` (fixed by Arena; the requested feature branch name could not be used).
 - Open PR: [#9 — Add shared WURK UP AI handoff record](https://github.com/sarthakjain5610/ShramSet8.0/pull/9), from `arena/895b41a0-shramset8-0` to `main`; service-worker changes and this updated handoff are being added to that existing PR.
-- `docs/AI_HANDOFF.md` is tracked in PR #9. Latest service-worker patch is local/uncommitted until the next handoff update.
+- `docs/AI_HANDOFF.md` is tracked in PR #9. The service-worker patch is committed as `1394457` on the PR branch.
 
 ## Code and tests
 
@@ -16,7 +16,7 @@ _Last verified: 2026-11-07 (Asia/Calcutta). This file contains no credentials or
 - `VITE_APP_URL` is also read by `src/services/verifyLink.ts` for generated app links.
 - `wrangler.jsonc` defines the `wurkup` static-assets site with `./dist` and `not_found_handling: "404-page"`; no custom `public/404.html` or `_headers` file was added. Wrangler 4.158.0 `deploy --dry-run` passed and read the built assets; no production deploy was performed.
 - `public/sw.js` now uses `wurkup-shell-v4`: network-first navigation with validated cached-shell fallback, validated shell/JS/CSS/font caching scoped to the current WURK UP cache, cleanup limited to obsolete `wurkup-shell-*` caches, preservation of unrelated caches, and bypass for `/sw.js`, `/api`, and `/auth`. Missing JS/CSS responses that resolve to HTML become empty 404s.
-- `scripts/service-worker-preview-smoke.mjs` and `npm run test:service-worker` exercise preview MIME checks, cache upgrade/preservation, excluded routes, missing assets, offline navigation, and hash routes.
+- `scripts/service-worker-preview-smoke.mjs` and `npm run test:service-worker` use a local Vite preview and simulated service-worker harness to exercise MIME checks, cache upgrade/preservation, excluded routes, missing assets, offline navigation, and hash routes. This does not verify a real Cloudflare Workers preview.
 - `npm run build`, JS syntax checks, `npm run lint`, `npm run test:service-worker`, `npm run test:all` (60 automated tests, 9/9 screen renders, 27/27 flow steps), and `npm run test:offline` (12/12 checks) passed. Build emits the existing >500 kB chunk warning; `test:all` emits its expected missing-translation diagnostic for the deliberate negative test.
 - Main contains the worker onboarding RPC, nullable unassigned-wage behavior, onboarding form, and the corrective onboarding conflict-target migration.
 - The RLS/pgTAP suite declares 64 assertions. The original test run reported an ambiguous `worker_id` conflict target; the follow-up migration uses `ON CONFLICT ON CONSTRAINT worker_private_data_pkey`. A successful post-fix 64-test execution has not been verified by Arena.
