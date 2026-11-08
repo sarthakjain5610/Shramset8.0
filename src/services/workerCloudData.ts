@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { CloudWorkerDirectoryRecord, WorkerPrivateDataRecord, SkillLevel } from '../types';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 /** Cloud directory query: request only the explicit non-sensitive worker projection. */
 export async function getWorkerDirectory(): Promise<CloudWorkerDirectoryRecord[]> {
@@ -22,9 +23,13 @@ export async function getMyWorkerPrivateData(workerId: string): Promise<WorkerPr
 }
 
 /** Create or retrieve the authenticated worker's own directory record through the protected onboarding RPC. */
-export async function completeMyWorkerOnboarding(trade: string, skillLevel: SkillLevel): Promise<string> {
-  if (!supabase) throw new Error('Supabase is not configured.');
-  const { data, error } = await supabase.rpc('complete_my_worker_onboarding', {
+export async function completeMyWorkerOnboarding(
+  trade: string,
+  skillLevel: SkillLevel,
+  client: SupabaseClient | null = supabase,
+): Promise<string> {
+  if (!client) throw new Error('Supabase is not configured.');
+  const { data, error } = await client.rpc('complete_my_worker_onboarding', {
     p_trade: trade,
     p_skill_level: skillLevel,
   });

@@ -33,13 +33,25 @@ export interface SignUpParams {
   role: 'worker' | 'contractor';
   fullName: string;
   phone: string;
-  email?: string;
-  password?: string;
+  email: string;
+  password: string;
   trade?: string;
   organizationName?: string;
   consentToShareContact: boolean;
   privacyAccepted: boolean;
 }
+
+export type AuthFailureKind = 'validation' | 'rate_limited' | 'already_registered' | 'invalid_credentials' | 'email_unconfirmed' | 'backend';
+
+export type SignUpResult =
+  | { success: true; state: 'authenticated'; user: UserProfile }
+  | { success: true; state: 'confirmation_pending'; email: string }
+  | { success: true; state: 'profile_pending'; email: string }
+  | { success: false; kind: AuthFailureKind; error: string };
+
+export type SignInResult =
+  | { success: true; user: UserProfile }
+  | { success: false; kind: AuthFailureKind; error: string };
 
 export interface SignInParams {
   loginId: string;
@@ -47,14 +59,47 @@ export interface SignInParams {
   rememberMe?: boolean;
 }
 
-class AuthService {
+function classifySupabaseError(error: unknown, context: 'signup' | 'signin'): { kind: AuthFailureKind; message: string } {
+  const details = (error && typeof error === 'object' ? error : {}) as { code?: unknown; status?: unknown; message?: unknown };
+  const code = String(details.code || '').toLowerCase();
+  const message = String(details.message || '').toLowerCase();
+  const status = Number(details.status);
+
+  if (context === 'signup' && (status === 429 || code === 'over_email_send_rate_limit')) {
+    return { kind: 'rate_limited', message: 'Too many confirmation emails were requested. Wait before trying again; do not retry repeatedly. Contact support if the problem continues.' };
+  }
+  if (status === 429 || code === 'over_request_rate_limit') {
+    return { kind: 'rate_limited', message: 'Too many authentication requests were made. Wait before trying again and do not retry repeatedly.' };
+  }
+  if (code === 'user_already_exists' || code === 'email_exists' || /already (?:been )?registered|user already exists|email already exists/.test(message)) {
+    return { kind: 'already_registered', message: 'An account may already exist for this email. Sign in or use password recovery instead of registering again.' };
+  }
+  if (code === 'email_not_confirmed') {
+    return { kind: 'email_unconfirmed', message: 'Verify your email using the confirmation link before signing in.' };
+  }
+  if (context === 'signin' && (code === 'invalid_credentials' || code === 'invalid_grant' || /invalid login credentials/.test(message))) {
+    return { kind: 'invalid_credentials', message: 'Email or password is incorrect. If you have not verified your email, check your confirmation message first.' };
+  }
+  if (code === 'validation_failed' || code === 'weak_password' || code === 'email_address_invalid' || /invalid email|password.*(?:short|weak)|email.*invalid/.test(message)) {
+    return { kind: 'validation', message: 'Check the email address and password, then try again. Passwords must meet the minimum length shown in the form.' };
+  }
+  return {
+    kind: 'backend',
+    message: context === 'signup'
+      ? 'We could not confirm the registration result. Do not submit repeatedly; try signing in or password recovery, or contact support.'
+      : 'We could not complete sign-in right now. Please try again later or contact support.',
+  };
+}
+
+export class AuthService {
   private currentUser: UserProfile | null = null;
   private isJudgeDemo = false;
-  private supabase: SupabaseClient | null = supabase;
+  private supabase: SupabaseClient | null;
   private listeners: ((state: AuthState) => void)[] = [];
 
-  constructor() {
-    this.restoreRemoteSession();
+  constructor(client: SupabaseClient | null = supabase, restoreSession = true) {
+    this.supabase = client;
+    if (restoreSession) this.restoreRemoteSession();
   }
 
   private async restoreRemoteSession(): Promise<void> {
@@ -119,35 +164,87 @@ class AuthService {
   /**
    * Register a new Worker or Contractor
    */
-  public async signUp(params: SignUpParams): Promise<{ success: boolean; user?: UserProfile; error?: string }> {
-    if (!this.supabase) return { success: false, error: 'Cloud authentication is not configured. Use explicitly labelled Local Demo Mode.' };
-    if (!['worker', 'contractor'].includes(params.role)) return { success: false, error: 'Unsupported account role.' };
-    if (!params.fullName?.trim() || !params.phone?.trim() || !params.email || !params.password)
-      return { success: false, error: 'Name, phone, email and password are required.' };
-    if (!params.privacyAccepted) return { success: false, error: 'Privacy consent is required.' };
-    const { data, error } = await this.supabase.auth.signUp({ email: params.email.trim(), password: params.password,
-      options: { data: { full_name: params.fullName.trim(), phone: params.phone.trim(), signup_role: params.role }, emailRedirectTo: window.location.origin } });
-    if (error) return { success: false, error: error.message };
-    if (!data.user) return { success: false, error: 'Supabase did not return an account.' };
-    // The requested public role is passed only as signup metadata; the database trigger constrains it to worker/contractor.
-    if (!data.session) return { success: true }; // Email confirmation is enabled; profile is provisioned by the database trigger.
-    await this.loadAuthenticatedProfile(data.user.id);
-    return this.currentUser ? { success: true, user: this.currentUser } : { success: false, error: 'Account created; profile role is not provisioned. Contact support or apply the database migration.' };
+  public async signUp(params: SignUpParams): Promise<SignUpResult> {
+    if (!this.supabase) return { success: false, kind: 'backend', error: 'Cloud authentication is not configured. Use explicitly labelled Local Demo Mode.' };
+    const email = params.email?.trim() || '';
+    if (!['worker', 'contractor'].includes(params.role)) return { success: false, kind: 'validation', error: 'Unsupported account role.' };
+    if (!params.fullName?.trim() || !params.phone?.trim() || !email || !params.password) {
+      return { success: false, kind: 'validation', error: 'Name, phone, email and password are required. Email is required for every account while phone sign-in is disabled.' };
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return { success: false, kind: 'validation', error: 'Enter a valid email address.' };
+    }
+    if (params.password.length < 6) return { success: false, kind: 'validation', error: 'Choose a password with at least 6 characters.' };
+    if (!params.privacyAccepted) return { success: false, kind: 'validation', error: 'Privacy consent is required.' };
+
+    try {
+      // Supabase Site URL and the production redirect allow-list include this origin.
+      // Use the origin only (not a path or arbitrary user-provided URL).
+      const emailRedirectTo = typeof window !== 'undefined' ? window.location.origin : undefined;
+      const { data, error } = await this.supabase.auth.signUp({
+        email,
+        password: params.password,
+        options: {
+          data: { full_name: params.fullName.trim(), phone: params.phone.trim(), signup_role: params.role },
+          ...(emailRedirectTo ? { emailRedirectTo } : {}),
+        },
+      });
+      if (error) {
+        const mapped = classifySupabaseError(error, 'signup');
+        return { success: false, kind: mapped.kind, error: mapped.message };
+      }
+      if (!data.user) {
+        return { success: false, kind: 'backend', error: 'We could not confirm the registration result. Do not submit repeatedly; try signing in or password recovery, or contact support.' };
+      }
+      // Supabase can obscure duplicate-email errors by returning a user with no identities.
+      // Treat that as an existing account; never attempt a second Auth/profile/worker insert.
+      if (Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        return { success: false, kind: 'already_registered', error: 'An account may already exist for this email. Sign in or use password recovery instead of registering again.' };
+      }
+      if (!data.session) return { success: true, state: 'confirmation_pending', email };
+
+      // The role is passed only as user metadata. The database trigger constrains it
+      // and creates the profile; workers are created later by the idempotent RPC.
+      try {
+        await this.loadAuthenticatedProfile(data.user.id);
+      } catch {
+        this.currentUser = null;
+      }
+      if (this.currentUser) return { success: true, state: 'authenticated', user: this.currentUser };
+
+      // Auth creation already succeeded; sign out and do not ask the user to register again.
+      try { await this.supabase.auth.signOut(); } catch { /* keep the original safe status */ }
+      return { success: true, state: 'profile_pending', email };
+    } catch (error) {
+      const mapped = classifySupabaseError(error, 'signup');
+      return { success: false, kind: mapped.kind, error: mapped.message };
+    }
   }
 
-  /**
-   * Sign In with Email or Mobile Number
-   */
-  public async signIn(params: SignInParams): Promise<{ success: boolean; user?: UserProfile; error?: string }> {
+  /** Sign in with the email address used at registration. Phone auth is disabled. */
+  public async signIn(params: SignInParams): Promise<SignInResult> {
     const email = params.loginId.trim();
     if (params.rememberMe) this.setRememberedLoginId(email); else this.clearRememberedLoginId();
-    if (!this.supabase) return { success: false, error: 'Cloud authentication is not configured. Local accounts are not accepted here; choose Local Demo Mode explicitly.' };
-    if (!email.includes('@') || !params.password) return { success: false, error: 'Use your registered email and password.' };
-    const { data, error } = await this.supabase.auth.signInWithPassword({ email, password: params.password });
-    if (error) return { success: false, error: error.message };
-    await this.loadAuthenticatedProfile(data.user.id);
-    if (!this.currentUser) { await this.supabase.auth.signOut(); return { success: false, error: 'Authenticated user has no valid worker/contractor profile.' }; }
-    return { success: true, user: this.currentUser };
+    if (!this.supabase) return { success: false, kind: 'backend', error: 'Cloud authentication is not configured. Local accounts are not accepted here; choose Local Demo Mode explicitly.' };
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !params.password) {
+      return { success: false, kind: 'validation', error: 'Use your registered email address and password.' };
+    }
+    try {
+      const { data, error } = await this.supabase.auth.signInWithPassword({ email, password: params.password });
+      if (error) {
+        const mapped = classifySupabaseError(error, 'signin');
+        return { success: false, kind: mapped.kind, error: mapped.message };
+      }
+      await this.loadAuthenticatedProfile(data.user.id);
+      if (!this.currentUser) {
+        await this.supabase.auth.signOut();
+        return { success: false, kind: 'backend', error: 'The account is authenticated but its WurkUp profile is not available. Contact support; do not register again.' };
+      }
+      return { success: true, user: this.currentUser };
+    } catch (error) {
+      const mapped = classifySupabaseError(error, 'signin');
+      return { success: false, kind: mapped.kind, error: mapped.message };
+    }
   }
 
   /**

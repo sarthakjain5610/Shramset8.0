@@ -57,7 +57,7 @@ export const PasswordRecovery: React.FC<PasswordRecoveryProps> = ({ onNavigate }
       asideTitle="Locked out? Your records are still safe."
       asidePoints={[
         'Shifts, wages and grievances are never deleted on sign-out',
-        'Registered phone numbers can also be used to sign in',
+        'Sign-in uses your registered email address; phone sign-in is not enabled',
         'Our helpline can verify you in person if email is unavailable',
       ]}
       footer={
