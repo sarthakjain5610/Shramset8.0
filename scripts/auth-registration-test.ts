@@ -30,9 +30,11 @@ type User = { id: string; email: string; identities?: { provider: string }[] };
 type AuthReply = { data: { user: User | null; session: { user: User } | null }; error: unknown };
 
 function makeClient() {
-  const calls = { signUp: [] as any[], signIn: [] as any[], rpc: [] as any[], signOut: 0, profileReads: 0 };
+  const calls = { signUp: [] as any[], signIn: [] as any[], recovery: [] as any[], rpc: [] as any[], signOut: 0, profileReads: 0 };
   let signUpReply: AuthReply = { data: { user: null, session: null }, error: null };
   let signInReply: AuthReply = { data: { user: null, session: null }, error: null };
+  let recoveryReply: { error: unknown } = { error: null };
+  let recoveryException: unknown = null;
   let profileRole: 'worker' | 'contractor' = 'worker';
   let onboardingId = 'WKR-AUTH-TEST';
   const profile = () => ({ id: 'auth-user-1', role: profileRole, full_name: 'Sunita Bai Verma', phone: '+91 9811122334' });
@@ -41,6 +43,11 @@ function makeClient() {
     auth: {
       signUp: async (args: any) => { calls.signUp.push(args); profileRole = args.options.data.signup_role; return signUpReply; },
       signInWithPassword: async (args: any) => { calls.signIn.push(args); return signInReply; },
+      resetPasswordForEmail: async (...args: any[]) => {
+        calls.recovery.push(args);
+        if (recoveryException) throw recoveryException;
+        return recoveryReply;
+      },
       signOut: async () => { calls.signOut += 1; return { error: null }; },
       getSession: async () => ({ data: { session: null }, error: null }),
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
@@ -61,6 +68,7 @@ function makeClient() {
     calls,
     setSignUp(reply: AuthReply) { signUpReply = reply; },
     setSignIn(reply: AuthReply) { signInReply = reply; },
+    setRecovery(reply: { error: unknown }, exception: unknown = null) { recoveryReply = reply; recoveryException = exception; },
     setProfileRole(role: 'worker' | 'contractor') { profileRole = role; },
     setOnboardingId(id: string) { onboardingId = id; },
   };
@@ -116,14 +124,59 @@ await test('signup accepted without a session returns confirmation-pending, not 
   assert.equal(service.getAuthState().isAuthenticated, false);
 });
 
-await test('email-send 429 is rate-limited and no automatic resend occurs', async () => {
+await test('email-send rate-limit code is matched specifically and not resent', async () => {
   const fake = makeClient();
-  fake.setSignUp({ data: { user: null, session: null }, error: { code: 'over_email_send_rate_limit', status: 429, message: 'rate limit' } });
+  fake.setSignUp({ data: { user: null, session: null }, error: { code: 'over_email_send_rate_limit', status: 500, message: 'rate limit' } });
   const result = await new AuthService(fake.client, false).signUp(baseParams);
   assert.equal(result.success, false);
   assert.equal(result.success ? '' : result.kind, 'rate_limited');
   assert.match(result.success ? '' : result.error, /wait before trying again/i);
   assert.equal(fake.calls.signUp.length, 1);
+});
+
+await test('generic request rate-limit code and unclassified HTTP 429 stay generic', async () => {
+  const coded = makeClient();
+  coded.setSignUp({ data: { user: null, session: null }, error: { code: 'over_request_rate_limit', status: 429, message: 'request limit' } });
+  const codedResult = await new AuthService(coded.client, false).signUp(baseParams);
+  assert.equal(codedResult.success ? '' : codedResult.kind, 'rate_limited');
+  assert.match(codedResult.success ? '' : codedResult.error, /authentication requests/i);
+  assert.doesNotMatch(codedResult.success ? '' : codedResult.error, /confirmation emails/i);
+
+  const unknown = makeClient();
+  unknown.setSignUp({ data: { user: null, session: null }, error: { status: 429, message: 'too many requests' } });
+  const unknownResult = await new AuthService(unknown.client, false).signUp(baseParams);
+  assert.equal(unknownResult.success ? '' : unknownResult.kind, 'rate_limited');
+  assert.match(unknownResult.success ? '' : unknownResult.error, /authentication requests/i);
+  assert.doesNotMatch(unknownResult.success ? '' : unknownResult.error, /confirmation emails/i);
+});
+
+await test('recovery email rate limit maps safely without retrying or exposing backend text', async () => {
+  const fake = makeClient();
+  fake.setRecovery({ error: { code: 'over_email_send_rate_limit', status: 429, message: 'internal provider detail' } });
+  const result = await new AuthService(fake.client, false).requestPasswordRecovery(baseParams.email);
+  assert.equal(result.success, false);
+  assert.match(result.message, /recovery emails/i);
+  assert.doesNotMatch(result.message, /internal provider detail/i);
+  assert.equal(fake.calls.recovery.length, 1);
+  assert.equal(fake.calls.recovery[0][1].redirectTo, PRODUCTION_ORIGIN);
+});
+
+await test('recovery generic 429 and network exception return safe messages with no retry', async () => {
+  const rateLimited = makeClient();
+  rateLimited.setRecovery({ error: { status: 429, message: 'internal rate-limit details' } });
+  const rateResult = await new AuthService(rateLimited.client, false).requestPasswordRecovery(baseParams.email);
+  assert.equal(rateResult.success, false);
+  assert.match(rateResult.message, /authentication requests/i);
+  assert.doesNotMatch(rateResult.message, /internal rate-limit details/i);
+  assert.equal(rateLimited.calls.recovery.length, 1);
+
+  const networkFailure = makeClient();
+  networkFailure.setRecovery({ error: null }, new Error('secret network endpoint details'));
+  const networkResult = await new AuthService(networkFailure.client, false).requestPasswordRecovery(baseParams.email);
+  assert.equal(networkResult.success, false);
+  assert.match(networkResult.message, /could not process the password recovery request/i);
+  assert.doesNotMatch(networkResult.message, /secret network endpoint details/i);
+  assert.equal(networkFailure.calls.recovery.length, 1);
 });
 
 await test('genuine backend failures receive a safe non-technical message', async () => {

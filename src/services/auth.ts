@@ -59,16 +59,21 @@ export interface SignInParams {
   rememberMe?: boolean;
 }
 
-function classifySupabaseError(error: unknown, context: 'signup' | 'signin'): { kind: AuthFailureKind; message: string } {
+function classifySupabaseError(error: unknown, context: 'signup' | 'signin' | 'recovery'): { kind: AuthFailureKind; message: string } {
   const details = (error && typeof error === 'object' ? error : {}) as { code?: unknown; status?: unknown; message?: unknown };
   const code = String(details.code || '').toLowerCase();
   const message = String(details.message || '').toLowerCase();
   const status = Number(details.status);
 
-  if (context === 'signup' && (status === 429 || code === 'over_email_send_rate_limit')) {
-    return { kind: 'rate_limited', message: 'Too many confirmation emails were requested. Wait before trying again; do not retry repeatedly. Contact support if the problem continues.' };
+  if (code === 'over_email_send_rate_limit') {
+    return {
+      kind: 'rate_limited',
+      message: context === 'recovery'
+        ? 'Too many recovery emails were requested. Wait before trying again; do not retry repeatedly. Contact support if the problem continues.'
+        : 'Too many confirmation emails were requested. Wait before trying again; do not retry repeatedly. Contact support if the problem continues.',
+    };
   }
-  if (status === 429 || code === 'over_request_rate_limit') {
+  if (code === 'over_request_rate_limit' || status === 429) {
     return { kind: 'rate_limited', message: 'Too many authentication requests were made. Wait before trying again and do not retry repeatedly.' };
   }
   if (code === 'user_already_exists' || code === 'email_exists' || /already (?:been )?registered|user already exists|email already exists/.test(message)) {
@@ -87,7 +92,9 @@ function classifySupabaseError(error: unknown, context: 'signup' | 'signin'): { 
     kind: 'backend',
     message: context === 'signup'
       ? 'We could not confirm the registration result. Do not submit repeatedly; try signing in or password recovery, or contact support.'
-      : 'We could not complete sign-in right now. Please try again later or contact support.',
+      : context === 'recovery'
+        ? 'We could not process the password recovery request right now. Please try again later or contact support.'
+        : 'We could not complete sign-in right now. Please try again later or contact support.',
   };
 }
 
@@ -271,18 +278,23 @@ export class AuthService {
    * Password Recovery Request
    */
   public async requestPasswordRecovery(email: string): Promise<{ success: boolean; message: string }> {
-    if (!email || !email.includes('@')) {
+    const normalizedEmail = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       return { success: false, message: 'Please enter a valid email address.' };
     }
 
     if (!this.supabase) return { success: false, message: 'Cloud authentication is not configured.' };
-    const { error } = await this.supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
-    if (error) return { success: false, message: error.message };
-
-    return {
-      success: true,
-      message: `If an account is associated with ${email}, password reset instructions have been dispatched.`,
-    };
+    try {
+      const redirectTo = typeof window !== 'undefined' ? window.location.origin : undefined;
+      const { error } = await this.supabase.auth.resetPasswordForEmail(normalizedEmail, redirectTo ? { redirectTo } : undefined);
+      if (error) return { success: false, message: classifySupabaseError(error, 'recovery').message };
+      return {
+        success: true,
+        message: `If an account is associated with ${normalizedEmail}, password reset instructions have been dispatched.`,
+      };
+    } catch {
+      return { success: false, message: 'We could not process the password recovery request right now. Please try again later or contact support.' };
+    }
   }
 
   /**
