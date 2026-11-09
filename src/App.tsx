@@ -278,7 +278,9 @@ export default function App() {
         }
       >
         {/* PUBLIC (LOGGED-OUT) PAGES */}
-        {authState.isPasswordRecovery && (
+        {authState.isAuthCallbackPending && <RouteFallback />}
+
+        {authState.isPasswordRecovery && !authState.isAuthCallbackPending && (
           <ResetPassword
             onNavigate={handleNavigate}
             lang={lang}
@@ -287,7 +289,7 @@ export default function App() {
           />
         )}
 
-        {!authState.isAuthenticated && !authState.isPasswordRecovery && (
+        {!authState.isAuthenticated && !authState.isPasswordRecovery && !authState.isAuthCallbackPending && (
           <div key={publicRouteKey} className="animate-fade-up">
             {routeState.route === 'home' && (
               <Home
@@ -339,7 +341,7 @@ export default function App() {
 
         <Suspense fallback={<RouteFallback />}>
         {/* AUTHENTICATED WORKER PORTAL */}
-        {authState.isAuthenticated && !authState.isPasswordRecovery && !authState.isJudgeDemo && authState.user?.role === 'worker' && (
+        {authState.isAuthenticated && !authState.isPasswordRecovery && !authState.isAuthCallbackPending && !authState.isJudgeDemo && authState.user?.role === 'worker' && (
           <WorkerPortal
             user={authState.user}
             lang={lang}
@@ -348,7 +350,7 @@ export default function App() {
         )}
 
         {/* AUTHENTICATED CONTRACTOR PORTAL */}
-        {authState.isAuthenticated && !authState.isPasswordRecovery && !authState.isJudgeDemo && authState.user?.role === 'contractor' && (
+        {authState.isAuthenticated && !authState.isPasswordRecovery && !authState.isAuthCallbackPending && !authState.isJudgeDemo && authState.user?.role === 'contractor' && (
           <ContractorDashboard user={authState.user} lang={lang} />
         )}
 

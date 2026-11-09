@@ -12,7 +12,7 @@
  */
 
 import { UserProfile, UserRole, ContactVerificationStatus, ManualContactCheckRecord } from '../types';
-import { supabase } from './supabase';
+import { initialSupabaseAuthCallbackPending, supabase } from './supabase';
 import { computeSha256Hex } from './cryptoAudit';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -64,6 +64,7 @@ export interface AuthState {
   isPasswordRecovery: boolean;
   passwordRecoveryError: string | null;
   passwordRecoveryCompleted: boolean;
+  isAuthCallbackPending: boolean;
 }
 
 export interface SignUpParams {
@@ -144,23 +145,51 @@ export class AuthService {
   private passwordRecoveryError: string | null = null;
   private passwordRecoveryUpdateInFlight = false;
   private passwordRecoveryCompleted = false;
+  private isAuthCallbackPending = false;
+  private authCallbackFallbackTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(client: SupabaseClient | null = supabase, restoreSession = true) {
+  constructor(
+    client: SupabaseClient | null = supabase,
+    restoreSession = true,
+    authCallbackPending = initialSupabaseAuthCallbackPending,
+  ) {
     this.supabase = client;
     this.passwordRecoveryError = getRecoveryErrorFromUrl();
     this.passwordRecoveryCompleted = this.passwordRecoveryError ? false : this.hasPersistedRecoveryCompletion();
     this.isPasswordRecovery = Boolean(this.passwordRecoveryError) || this.hasPersistedRecoveryState() || this.passwordRecoveryCompleted;
+    this.isAuthCallbackPending = authCallbackPending && !this.passwordRecoveryError;
     if (this.passwordRecoveryError) {
       this.persistRecoveryState(true);
       this.persistRecoveryCompletion(false);
     }
+    if (this.isAuthCallbackPending) {
+      // A failed URL callback may not emit any auth event; surface a safe recovery error rather than hanging.
+      this.authCallbackFallbackTimer = setTimeout(() => this.failPendingAuthCallback(), 8000);
+    }
     if (restoreSession) this.restoreRemoteSession();
+  }
+
+  private clearAuthCallbackPending(): void {
+    this.isAuthCallbackPending = false;
+    if (this.authCallbackFallbackTimer) clearTimeout(this.authCallbackFallbackTimer);
+    this.authCallbackFallbackTimer = null;
+  }
+
+  private failPendingAuthCallback(): void {
+    if (!this.isAuthCallbackPending) return;
+    this.clearAuthCallbackPending();
+    this.isPasswordRecovery = true;
+    this.passwordRecoveryError = INVALID_RECOVERY_LINK_MESSAGE;
+    this.persistRecoveryState(true);
+    this.persistRecoveryCompletion(false);
+    this.notify();
   }
 
   private async restoreRemoteSession(): Promise<void> {
     if (!this.supabase) return;
     const { data: { subscription } } = this.supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
+        this.clearAuthCallbackPending();
         this.isPasswordRecovery = true;
         this.passwordRecoveryError = null;
         this.passwordRecoveryCompleted = false;
@@ -172,6 +201,13 @@ export class AuthService {
         this.notify();
         return;
       }
+      // Supabase emits INITIAL_SESSION as part of client startup; it can precede the
+      // deferred PASSWORD_RECOVERY callback. Keep routing gated until the real event.
+      if (event === 'INITIAL_SESSION' && this.isAuthCallbackPending) {
+        this.notify();
+        return;
+      }
+      if (this.isAuthCallbackPending) this.clearAuthCallbackPending();
       if (!session?.user) {
         this.currentUser = null;
         this.isJudgeDemo = false;
@@ -189,9 +225,12 @@ export class AuthService {
     });
     void subscription;
     const { data, error } = await this.supabase.auth.getSession();
-    if (!error && data.session?.user && !this.isPasswordRecovery) await this.loadAuthenticatedProfile(data.session.user.id);
-    else if (error || !data.session?.user) { this.currentUser = null; this.notify(); }
-    else this.notify();
+    if (!error && data.session?.user && !this.isPasswordRecovery && !this.isAuthCallbackPending) await this.loadAuthenticatedProfile(data.session.user.id);
+    else if (error || !data.session?.user) {
+      this.currentUser = null;
+      if (this.isAuthCallbackPending) this.failPendingAuthCallback();
+      else this.notify();
+    } else this.notify();
   }
 
   private async loadAuthenticatedProfile(id: string): Promise<void> {
@@ -247,6 +286,7 @@ export class AuthService {
       isPasswordRecovery: this.isPasswordRecovery,
       passwordRecoveryError: this.passwordRecoveryError,
       passwordRecoveryCompleted: this.passwordRecoveryCompleted,
+      isAuthCallbackPending: this.isAuthCallbackPending,
     };
   }
 
@@ -375,6 +415,7 @@ export class AuthService {
     this.isPasswordRecovery = false;
     this.passwordRecoveryError = null;
     this.passwordRecoveryCompleted = false;
+    this.isAuthCallbackPending = false;
     this.persistRecoveryState(false);
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(SESSION_STORAGE_KEY);

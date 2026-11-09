@@ -1,5 +1,22 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+const AUTH_CALLBACK_KEYS = ['code', 'error', 'error_code', 'access_token', 'refresh_token', 'token_hash'];
+
+/** Detect callback intent before Supabase consumes or cleans its URL parameters. */
+export function hasSupabaseAuthCallback(urlText?: string): boolean {
+  if (!urlText && typeof window === 'undefined') return false;
+  try {
+    const url = new URL(urlText || window.location.href);
+    const fragment = url.hash.replace(/^#\/?/, '');
+    const query = new URLSearchParams(url.search);
+    const hashParams = new URLSearchParams(fragment.includes('?') ? fragment.slice(fragment.indexOf('?') + 1) : fragment);
+    return AUTH_CALLBACK_KEYS.some((key) => query.has(key) || hashParams.has(key));
+  } catch { return false; }
+}
+
+// Capture this before createClient's automatic callback processing can clear the URL.
+export const initialSupabaseAuthCallbackPending = hasSupabaseAuthCallback();
+
 export interface SupabaseConfigStatus {
   isConfigured: boolean;
   url: string | null;

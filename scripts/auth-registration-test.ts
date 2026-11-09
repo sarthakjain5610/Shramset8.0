@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { AuthService, SignUpParams } from '../src/services/auth';
 import { getAuthRedirectRoute } from '../src/services/authRouting';
+import { hasSupabaseAuthCallback } from '../src/services/supabase';
 import { completeMyWorkerOnboarding } from '../src/services/workerCloudData';
 
 const PRODUCTION_ORIGIN = 'https://wurkup.sarthakjain5610.workers.dev';
@@ -286,12 +287,35 @@ await test('duplicate recovery callbacks cannot trigger duplicate password updat
   await service.dismissPasswordRecovery();
 });
 
+await test('INITIAL_SESSION cannot outrun the deferred PASSWORD_RECOVERY callback', async () => {
+  recoveryStorage.clear();
+  const fake = makeClient();
+  fake.emitAuthEvent('INITIAL_SESSION', { user });
+  const service = new AuthService(fake.client, true, true);
+  fake.emitAuthEvent('INITIAL_SESSION', { user });
+  assert.equal(service.getAuthState().isAuthCallbackPending, true);
+  assert.equal(service.getAuthState().isPasswordRecovery, false);
+  assert.equal(fake.calls.profileReads, 0);
+  fake.emitAuthEvent('PASSWORD_RECOVERY', { user });
+  assert.equal(service.getAuthState().isAuthCallbackPending, false);
+  assert.equal(service.getAuthState().isPasswordRecovery, true);
+  assert.equal(fake.calls.profileReads, 0);
+});
+
+await test('callback detection recognizes PKCE, implicit, and error callbacks without inspecting token values', async () => {
+  assert.equal(hasSupabaseAuthCallback(`${PRODUCTION_ORIGIN}/?code=opaque-code`), true);
+  assert.equal(hasSupabaseAuthCallback(`${PRODUCTION_ORIGIN}/#access_token=opaque-token&type=recovery`), true);
+  assert.equal(hasSupabaseAuthCallback(`${PRODUCTION_ORIGIN}/?error=access_denied&error_code=otp_expired`), true);
+  assert.equal(hasSupabaseAuthCallback(`${PRODUCTION_ORIGIN}/#/worker`), false);
+});
+
 await test('normal role-based dashboard redirects remain separate from recovery redirects', async () => {
   const userFor = (role: 'worker' | 'contractor') => ({ id: 'auth-user-1', fullName: 'Test', role } as any);
-  assert.equal(getAuthRedirectRoute({ isAuthenticated: true, isJudgeDemo: false, user: userFor('worker'), isPasswordRecovery: false }, 'home'), 'worker');
-  assert.equal(getAuthRedirectRoute({ isAuthenticated: true, isJudgeDemo: false, user: userFor('contractor'), isPasswordRecovery: false }, 'home'), 'contractor');
-  assert.equal(getAuthRedirectRoute({ isAuthenticated: true, isJudgeDemo: false, user: userFor('worker'), isPasswordRecovery: true }, 'home'), null);
-  assert.equal(getAuthRedirectRoute({ isAuthenticated: false, isJudgeDemo: false, user: null, isPasswordRecovery: false }, 'worker'), 'sign-in');
+  assert.equal(getAuthRedirectRoute({ isAuthenticated: true, isJudgeDemo: false, user: userFor('worker'), isPasswordRecovery: false, isAuthCallbackPending: false }, 'home'), 'worker');
+  assert.equal(getAuthRedirectRoute({ isAuthenticated: true, isJudgeDemo: false, user: userFor('contractor'), isPasswordRecovery: false, isAuthCallbackPending: false }, 'home'), 'contractor');
+  assert.equal(getAuthRedirectRoute({ isAuthenticated: true, isJudgeDemo: false, user: userFor('worker'), isPasswordRecovery: true, isAuthCallbackPending: false }, 'home'), null);
+  assert.equal(getAuthRedirectRoute({ isAuthenticated: true, isJudgeDemo: false, user: userFor('worker'), isPasswordRecovery: false, isAuthCallbackPending: true }, 'home'), null);
+  assert.equal(getAuthRedirectRoute({ isAuthenticated: false, isJudgeDemo: false, user: null, isPasswordRecovery: false, isAuthCallbackPending: false }, 'worker'), 'sign-in');
 });
 
 await test('genuine backend failures receive a safe non-technical message', async () => {
