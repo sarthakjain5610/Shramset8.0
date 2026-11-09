@@ -21,6 +21,7 @@ import { HowItWorks } from './components/public/HowItWorks';
 import { CreateAccount } from './components/public/CreateAccount';
 import { SignIn } from './components/public/SignIn';
 import { PasswordRecovery } from './components/public/PasswordRecovery';
+import { ResetPassword } from './components/public/ResetPassword';
 import { Privacy } from './components/public/Privacy';
 import { HelpContact } from './components/public/HelpContact';
 import { About } from './components/public/About';
@@ -74,6 +75,7 @@ const WelfareSchemes = lazy(() =>
 
 import { db } from './services/db';
 import { auth, AuthState } from './services/auth';
+import { getAuthRedirectRoute } from './services/authRouting';
 import { router, AppRoute, RouteState } from './services/router';
 import { Worker, ConstructionSite, AttendanceRecord, WageLedgerEntry, DisputeGrievance } from './types';
 import { Language, getSavedLanguage, saveLanguage } from './services/i18n';
@@ -115,19 +117,10 @@ export default function App() {
 
   // Keep the URL in sync with the authenticated role
   useEffect(() => {
-    if (authState.isAuthenticated) {
-      if (authState.isJudgeDemo) {
-        if (routeState.route !== 'judge-demo') router.navigate('judge-demo');
-      } else if (authState.user?.role === 'worker') {
-        if (routeState.route !== 'worker') router.navigate('worker');
-      } else if (authState.user?.role === 'contractor') {
-        if (routeState.route !== 'contractor') router.navigate('contractor');
-      }
-    } else if (routeState.route === 'worker' || routeState.route === 'contractor') {
-      router.navigate('sign-in');
-    }
+    const targetRoute = getAuthRedirectRoute(authState, routeState.route);
+    if (targetRoute && routeState.route !== targetRoute) router.navigate(targetRoute);
     // routeState.route intentionally included so deep links are corrected on load
-  }, [authState.isAuthenticated, authState.user?.role, authState.isJudgeDemo, routeState.route]);
+  }, [authState.isAuthenticated, authState.user?.role, authState.isJudgeDemo, authState.isPasswordRecovery, routeState.route]);
 
   // Keep the document title and language attribute in sync with the app state.
   useEffect(() => {
@@ -285,7 +278,16 @@ export default function App() {
         }
       >
         {/* PUBLIC (LOGGED-OUT) PAGES */}
-        {!authState.isAuthenticated && (
+        {authState.isPasswordRecovery && (
+          <ResetPassword
+            onNavigate={handleNavigate}
+            lang={lang}
+            recoveryError={authState.passwordRecoveryError}
+            recoveryComplete={authState.passwordRecoveryCompleted}
+          />
+        )}
+
+        {!authState.isAuthenticated && !authState.isPasswordRecovery && (
           <div key={publicRouteKey} className="animate-fade-up">
             {routeState.route === 'home' && (
               <Home
@@ -337,7 +339,7 @@ export default function App() {
 
         <Suspense fallback={<RouteFallback />}>
         {/* AUTHENTICATED WORKER PORTAL */}
-        {authState.isAuthenticated && !authState.isJudgeDemo && authState.user?.role === 'worker' && (
+        {authState.isAuthenticated && !authState.isPasswordRecovery && !authState.isJudgeDemo && authState.user?.role === 'worker' && (
           <WorkerPortal
             user={authState.user}
             lang={lang}
@@ -346,7 +348,7 @@ export default function App() {
         )}
 
         {/* AUTHENTICATED CONTRACTOR PORTAL */}
-        {authState.isAuthenticated && !authState.isJudgeDemo && authState.user?.role === 'contractor' && (
+        {authState.isAuthenticated && !authState.isPasswordRecovery && !authState.isJudgeDemo && authState.user?.role === 'contractor' && (
           <ContractorDashboard user={authState.user} lang={lang} />
         )}
 

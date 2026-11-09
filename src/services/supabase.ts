@@ -14,7 +14,11 @@ const validUrl = (() => { try { const u = new URL(rawUrl || ''); return u.protoc
 const validKey = !!rawKey?.trim() && !/service_role|secret/i.test(rawKey);
 
 export const supabase: SupabaseClient | null = validUrl && validKey
-  ? createClient(rawUrl!, rawKey!, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } })
+  ? createClient(rawUrl!, rawKey!, {
+      // Supabase exchanges recovery callback codes/tokens and emits PASSWORD_RECOVERY;
+      // application routing must not rewrite the URL before this detection completes.
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+    })
   : null;
 
 export function getSupabaseStatus(): SupabaseConfigStatus {

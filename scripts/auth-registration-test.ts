@@ -2,16 +2,23 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { AuthService, SignUpParams } from '../src/services/auth';
+import { getAuthRedirectRoute } from '../src/services/authRouting';
 import { completeMyWorkerOnboarding } from '../src/services/workerCloudData';
 
 const PRODUCTION_ORIGIN = 'https://wurkup.sarthakjain5610.workers.dev';
 const storage = new Map<string, string>();
+const recoveryStorage = new Map<string, string>();
 (globalThis as any).window = {
-  location: { origin: PRODUCTION_ORIGIN },
+  location: { origin: PRODUCTION_ORIGIN, search: '', hash: '' },
   localStorage: {
     getItem: (key: string) => storage.get(key) ?? null,
     setItem: (key: string, value: string) => storage.set(key, value),
     removeItem: (key: string) => storage.delete(key),
+  },
+  sessionStorage: {
+    getItem: (key: string) => recoveryStorage.get(key) ?? null,
+    setItem: (key: string, value: string) => recoveryStorage.set(key, value),
+    removeItem: (key: string) => recoveryStorage.delete(key),
   },
 };
 
@@ -30,11 +37,14 @@ type User = { id: string; email: string; identities?: { provider: string }[] };
 type AuthReply = { data: { user: User | null; session: { user: User } | null }; error: unknown };
 
 function makeClient() {
-  const calls = { signUp: [] as any[], signIn: [] as any[], recovery: [] as any[], rpc: [] as any[], signOut: 0, profileReads: 0 };
+  const calls = { signUp: [] as any[], signIn: [] as any[], recovery: [] as any[], rpc: [] as any[], signOut: 0, profileReads: 0, passwordUpdates: 0, passwordLength: 0 };
   let signUpReply: AuthReply = { data: { user: null, session: null }, error: null };
   let signInReply: AuthReply = { data: { user: null, session: null }, error: null };
   let recoveryReply: { error: unknown } = { error: null };
   let recoveryException: unknown = null;
+  let updateUserError: unknown = null;
+  let authSession: { user: User } | null = null;
+  let authCallback: ((event: string, session: { user: User } | null) => void) | null = null;
   let profileRole: 'worker' | 'contractor' = 'worker';
   let onboardingId = 'WKR-AUTH-TEST';
   const profile = () => ({ id: 'auth-user-1', role: profileRole, full_name: 'Sunita Bai Verma', phone: '+91 9811122334' });
@@ -48,9 +58,18 @@ function makeClient() {
         if (recoveryException) throw recoveryException;
         return recoveryReply;
       },
-      signOut: async () => { calls.signOut += 1; return { error: null }; },
-      getSession: async () => ({ data: { session: null }, error: null }),
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
+      updateUser: async ({ password }: { password: string }) => { calls.passwordUpdates += 1; calls.passwordLength = password.length; return { error: updateUserError }; },
+      signOut: async () => {
+        calls.signOut += 1;
+        authSession = null;
+        authCallback?.('SIGNED_OUT', null);
+        return { error: null };
+      },
+      getSession: async () => ({ data: { session: authSession }, error: null }),
+      onAuthStateChange: (callback: (event: string, session: { user: User } | null) => void) => {
+        authCallback = callback;
+        return { data: { subscription: { unsubscribe() {} } } };
+      },
     },
     from: () => ({
       select: () => ({
@@ -69,6 +88,8 @@ function makeClient() {
     setSignUp(reply: AuthReply) { signUpReply = reply; },
     setSignIn(reply: AuthReply) { signInReply = reply; },
     setRecovery(reply: { error: unknown }, exception: unknown = null) { recoveryReply = reply; recoveryException = exception; },
+    setUpdateUserError(error: unknown) { updateUserError = error; },
+    emitAuthEvent(event: string, session: { user: User } | null = { user }) { authSession = session; authCallback?.(event, session); },
     setProfileRole(role: 'worker' | 'contractor') { profileRole = role; },
     setOnboardingId(id: string) { onboardingId = id; },
   };
@@ -177,6 +198,100 @@ await test('recovery generic 429 and network exception return safe messages with
   assert.match(networkResult.message, /could not process the password recovery request/i);
   assert.doesNotMatch(networkResult.message, /secret network endpoint details/i);
   assert.equal(networkFailure.calls.recovery.length, 1);
+});
+
+await test('PASSWORD_RECOVERY callback takes precedence and its marker survives a page refresh', async () => {
+  recoveryStorage.clear();
+  const location = (globalThis as any).window.location;
+  location.search = '?code=opaque-pkce-code';
+  location.hash = '#access_token=redacted-test-token&type=recovery';
+  const initialUrl = `${location.search}${location.hash}`;
+  const fake = makeClient();
+  const callbackService = new AuthService(fake.client, true);
+  fake.emitAuthEvent('PASSWORD_RECOVERY');
+  assert.equal(callbackService.getAuthState().isPasswordRecovery, true);
+  assert.equal(callbackService.getAuthState().isAuthenticated, false);
+  assert.equal(fake.calls.profileReads, 0);
+  assert.equal(recoveryStorage.get('shramsetu_password_recovery_active'), 'true');
+  assert.equal(`${location.search}${location.hash}`, initialUrl, 'Auth callback URL remains intact until Supabase processes it');
+
+  const refreshedService = new AuthService(fake.client, false);
+  assert.equal(refreshedService.getAuthState().isPasswordRecovery, true);
+  const updated = await refreshedService.updatePasswordFromRecovery('new-worker-password');
+  assert.equal(updated.success, true);
+  assert.equal(fake.calls.passwordUpdates, 1);
+  assert.equal(fake.calls.passwordLength, 'new-worker-password'.length);
+  assert.equal(refreshedService.getAuthState().isPasswordRecovery, true);
+  assert.equal(refreshedService.getAuthState().passwordRecoveryCompleted, true);
+  assert.equal(recoveryStorage.get('shramsetu_password_recovery_completed'), 'true');
+  await refreshedService.dismissPasswordRecovery();
+  assert.equal(refreshedService.getAuthState().isPasswordRecovery, false);
+  assert.equal(recoveryStorage.has('shramsetu_password_recovery_active'), false);
+  assert.equal(recoveryStorage.has('shramsetu_password_recovery_completed'), false);
+  location.search = '';
+  location.hash = '';
+});
+
+await test('expired recovery callbacks fail safely and unauthorized updates are rejected', async () => {
+  recoveryStorage.clear();
+  const location = (globalThis as any).window.location;
+  location.search = '?error=access_denied&error_code=otp_expired&error_description=private-detail';
+  location.hash = '';
+  const expired = makeClient();
+  const expiredService = new AuthService(expired.client, false);
+  const state = expiredService.getAuthState();
+  assert.equal(state.isPasswordRecovery, true);
+  assert.match(state.passwordRecoveryError || '', /invalid or has expired/i);
+  assert.doesNotMatch(state.passwordRecoveryError || '', /private-detail/i);
+  const expiredResult = await expiredService.updatePasswordFromRecovery('new-worker-password');
+  assert.equal(expiredResult.success, false);
+  assert.equal(expired.calls.passwordUpdates, 0);
+
+  location.search = '';
+  const ordinary = makeClient();
+  const ordinaryService = new AuthService(ordinary.client, false);
+  const unauthorized = await ordinaryService.updatePasswordFromRecovery('new-worker-password');
+  assert.equal(unauthorized.success, false);
+  assert.equal(ordinary.calls.passwordUpdates, 0);
+
+  const reused = makeClient();
+  const reusedService = new AuthService(reused.client, true);
+  reused.emitAuthEvent('PASSWORD_RECOVERY', null);
+  const reusedResult = await reusedService.updatePasswordFromRecovery('new-worker-password');
+  assert.equal(reusedResult.success, false);
+  assert.match(reusedResult.message, /invalid or has expired/i);
+  assert.equal(reused.calls.passwordUpdates, 0);
+});
+
+await test('duplicate recovery callbacks cannot trigger duplicate password updates', async () => {
+  recoveryStorage.clear();
+  const location = (globalThis as any).window.location;
+  location.search = '';
+  location.hash = '';
+  const fake = makeClient();
+  const service = new AuthService(fake.client, true);
+  fake.emitAuthEvent('PASSWORD_RECOVERY');
+  fake.emitAuthEvent('PASSWORD_RECOVERY');
+  assert.equal(fake.calls.profileReads, 0);
+  const results = await Promise.all([
+    service.updatePasswordFromRecovery('new-worker-password'),
+    service.updatePasswordFromRecovery('new-worker-password'),
+  ]);
+  assert.equal(results.filter((result) => result.success).length, 1);
+  assert.equal(fake.calls.passwordUpdates, 1);
+  assert.equal(service.getAuthState().passwordRecoveryCompleted, true);
+  const repeated = await service.updatePasswordFromRecovery('new-worker-password');
+  assert.equal(repeated.success, false);
+  assert.equal(fake.calls.passwordUpdates, 1);
+  await service.dismissPasswordRecovery();
+});
+
+await test('normal role-based dashboard redirects remain separate from recovery redirects', async () => {
+  const userFor = (role: 'worker' | 'contractor') => ({ id: 'auth-user-1', fullName: 'Test', role } as any);
+  assert.equal(getAuthRedirectRoute({ isAuthenticated: true, isJudgeDemo: false, user: userFor('worker'), isPasswordRecovery: false }, 'home'), 'worker');
+  assert.equal(getAuthRedirectRoute({ isAuthenticated: true, isJudgeDemo: false, user: userFor('contractor'), isPasswordRecovery: false }, 'home'), 'contractor');
+  assert.equal(getAuthRedirectRoute({ isAuthenticated: true, isJudgeDemo: false, user: userFor('worker'), isPasswordRecovery: true }, 'home'), null);
+  assert.equal(getAuthRedirectRoute({ isAuthenticated: false, isJudgeDemo: false, user: null, isPasswordRecovery: false }, 'worker'), 'sign-in');
 });
 
 await test('genuine backend failures receive a safe non-technical message', async () => {

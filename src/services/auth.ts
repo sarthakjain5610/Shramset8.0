@@ -19,6 +19,40 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 const SESSION_STORAGE_KEY = 'shramsetu_auth_active_user';
 const REMEMBERED_ID_KEY = 'shramsetu_remembered_login_id';
 const LOCAL_USERS_KEY = 'shramsetu_registered_users_registry';
+const PASSWORD_RECOVERY_STORAGE_KEY = 'shramsetu_password_recovery_active';
+const PASSWORD_RECOVERY_COMPLETED_KEY = 'shramsetu_password_recovery_completed';
+const PASSWORD_MIN_LENGTH = 6;
+const INVALID_RECOVERY_LINK_MESSAGE = 'This password recovery link is invalid or has expired. Request a new recovery email or return to sign in.';
+
+function getRecoveryErrorFromUrl(): string | null {
+  if (typeof window === 'undefined' || !window.location) return null;
+  const hash = window.location.hash.replace(/^#\/?/, '');
+  const params = new URLSearchParams(`${window.location.search}&${hash}`);
+  const errorCode = params.get('error_code') || params.get('error');
+  return errorCode ? INVALID_RECOVERY_LINK_MESSAGE : null;
+}
+
+function stripAuthCallbackParams(url: URL): void {
+  const callbackKeys = ['code', 'error', 'error_code', 'error_description', 'access_token', 'refresh_token', 'token_type', 'expires_in', 'type', 'provider_token', 'provider_refresh_token'];
+  for (const key of callbackKeys) url.searchParams.delete(key);
+
+  const fragment = url.hash.slice(1);
+  if (!fragment) return;
+  if (fragment.startsWith('/')) {
+    const queryIndex = fragment.indexOf('?');
+    if (queryIndex < 0) return;
+    const route = fragment.slice(0, queryIndex);
+    const params = new URLSearchParams(fragment.slice(queryIndex + 1));
+    for (const key of callbackKeys) params.delete(key);
+    const query = params.toString();
+    url.hash = query ? `${route}?${query}` : route;
+    return;
+  }
+
+  const params = new URLSearchParams(fragment);
+  for (const key of callbackKeys) params.delete(key);
+  url.hash = params.toString();
+}
 
 export interface AuthState {
   user: UserProfile | null;
@@ -27,6 +61,9 @@ export interface AuthState {
   isJudgeDemo: boolean;
   isLoading: boolean;
   errorMessage: string | null;
+  isPasswordRecovery: boolean;
+  passwordRecoveryError: string | null;
+  passwordRecoveryCompleted: boolean;
 }
 
 export interface SignUpParams {
@@ -103,23 +140,58 @@ export class AuthService {
   private isJudgeDemo = false;
   private supabase: SupabaseClient | null;
   private listeners: ((state: AuthState) => void)[] = [];
+  private isPasswordRecovery = false;
+  private passwordRecoveryError: string | null = null;
+  private passwordRecoveryUpdateInFlight = false;
+  private passwordRecoveryCompleted = false;
 
   constructor(client: SupabaseClient | null = supabase, restoreSession = true) {
     this.supabase = client;
+    this.passwordRecoveryError = getRecoveryErrorFromUrl();
+    this.passwordRecoveryCompleted = this.passwordRecoveryError ? false : this.hasPersistedRecoveryCompletion();
+    this.isPasswordRecovery = Boolean(this.passwordRecoveryError) || this.hasPersistedRecoveryState() || this.passwordRecoveryCompleted;
+    if (this.passwordRecoveryError) {
+      this.persistRecoveryState(true);
+      this.persistRecoveryCompletion(false);
+    }
     if (restoreSession) this.restoreRemoteSession();
   }
 
   private async restoreRemoteSession(): Promise<void> {
     if (!this.supabase) return;
-    const { data: { subscription } } = this.supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session?.user) { this.currentUser = null; this.isJudgeDemo = false; this.notify(); return; }
+    const { data: { subscription } } = this.supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        this.isPasswordRecovery = true;
+        this.passwordRecoveryError = null;
+        this.passwordRecoveryCompleted = false;
+        this.persistRecoveryState(true);
+        this.persistRecoveryCompletion(false);
+        // The recovery screen needs the Supabase session, not a role/profile lookup.
+        this.currentUser = null;
+        this.isJudgeDemo = false;
+        this.notify();
+        return;
+      }
+      if (!session?.user) {
+        this.currentUser = null;
+        this.isJudgeDemo = false;
+        if (event === 'SIGNED_OUT') {
+          this.isPasswordRecovery = false;
+          this.passwordRecoveryError = null;
+          this.persistRecoveryState(false);
+        }
+        this.notify();
+        return;
+      }
       // Defer network work until Supabase's auth callback has returned.
       queueMicrotask(() => { void this.loadAuthenticatedProfile(session.user.id); });
+      this.notify();
     });
     void subscription;
     const { data, error } = await this.supabase.auth.getSession();
-    if (!error && data.session?.user) await this.loadAuthenticatedProfile(data.session.user.id);
-    else { this.currentUser = null; this.notify(); }
+    if (!error && data.session?.user && !this.isPasswordRecovery) await this.loadAuthenticatedProfile(data.session.user.id);
+    else if (error || !data.session?.user) { this.currentUser = null; this.notify(); }
+    else this.notify();
   }
 
   private async loadAuthenticatedProfile(id: string): Promise<void> {
@@ -134,6 +206,35 @@ export class AuthService {
     this.isJudgeDemo = false; this.notify();
   }
 
+  private hasPersistedRecoveryState(): boolean {
+    if (typeof window === 'undefined') return false;
+    try { return window.sessionStorage.getItem(PASSWORD_RECOVERY_STORAGE_KEY) === 'true'; } catch { return false; }
+  }
+
+  private persistRecoveryState(active: boolean): void {
+    if (typeof window === 'undefined') return;
+    try {
+      if (active) window.sessionStorage.setItem(PASSWORD_RECOVERY_STORAGE_KEY, 'true');
+      else {
+        window.sessionStorage.removeItem(PASSWORD_RECOVERY_STORAGE_KEY);
+        window.sessionStorage.removeItem(PASSWORD_RECOVERY_COMPLETED_KEY);
+      }
+    } catch { /* session storage is a convenience, never the authorization source */ }
+  }
+
+  private hasPersistedRecoveryCompletion(): boolean {
+    if (typeof window === 'undefined') return false;
+    try { return window.sessionStorage.getItem(PASSWORD_RECOVERY_COMPLETED_KEY) === 'true'; } catch { return false; }
+  }
+
+  private persistRecoveryCompletion(completed: boolean): void {
+    if (typeof window === 'undefined') return;
+    try {
+      if (completed) window.sessionStorage.setItem(PASSWORD_RECOVERY_COMPLETED_KEY, 'true');
+      else window.sessionStorage.removeItem(PASSWORD_RECOVERY_COMPLETED_KEY);
+    } catch { /* non-sensitive UI state only */ }
+  }
+
   public getAuthState(): AuthState {
     const isAuthed = Boolean(this.currentUser);
     return {
@@ -143,6 +244,9 @@ export class AuthService {
       isJudgeDemo: this.isJudgeDemo,
       isLoading: false,
       errorMessage: null,
+      isPasswordRecovery: this.isPasswordRecovery,
+      passwordRecoveryError: this.passwordRecoveryError,
+      passwordRecoveryCompleted: this.passwordRecoveryCompleted,
     };
   }
 
@@ -268,6 +372,10 @@ export class AuthService {
 
     this.currentUser = null;
     this.isJudgeDemo = false;
+    this.isPasswordRecovery = false;
+    this.passwordRecoveryError = null;
+    this.passwordRecoveryCompleted = false;
+    this.persistRecoveryState(false);
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(SESSION_STORAGE_KEY);
     }
@@ -294,6 +402,52 @@ export class AuthService {
       };
     } catch {
       return { success: false, message: 'We could not process the password recovery request right now. Please try again later or contact support.' };
+    }
+  }
+
+  /** Leave the recovery form after an invalid/expired link and remove safe error callback parameters. */
+  public async dismissPasswordRecovery(): Promise<void> {
+    await this.signOut();
+    if (typeof window === 'undefined' || !window.location || typeof window.history?.replaceState !== 'function') return;
+    try {
+      const url = new URL(window.location.href);
+      stripAuthCallbackParams(url);
+      window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+    } catch { /* callback cleanup is best-effort and never affects authentication */ }
+  }
+
+  /** Update a password only from an active, valid Supabase recovery session. */
+  public async updatePasswordFromRecovery(password: string): Promise<{ success: boolean; message: string }> {
+    if (!this.supabase) return { success: false, message: 'Cloud authentication is not configured.' };
+    if (!this.isPasswordRecovery || this.passwordRecoveryError) {
+      return { success: false, message: this.passwordRecoveryError || INVALID_RECOVERY_LINK_MESSAGE };
+    }
+    if (this.passwordRecoveryUpdateInFlight || this.passwordRecoveryCompleted) {
+      return { success: false, message: 'This password update is already being processed. If it succeeded, sign in with your new password.' };
+    }
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      return { success: false, message: `Choose a password with at least ${PASSWORD_MIN_LENGTH} characters.` };
+    }
+
+    this.passwordRecoveryUpdateInFlight = true;
+    try {
+      const { data, error: sessionError } = await this.supabase.auth.getSession();
+      if (sessionError || !data.session) {
+        this.passwordRecoveryError = INVALID_RECOVERY_LINK_MESSAGE;
+        this.notify();
+        return { success: false, message: INVALID_RECOVERY_LINK_MESSAGE };
+      }
+      const { error } = await this.supabase.auth.updateUser({ password });
+      if (error) return { success: false, message: classifySupabaseError(error, 'recovery').message };
+
+      this.passwordRecoveryCompleted = true;
+      this.persistRecoveryCompletion(true);
+      this.notify();
+      return { success: true, message: 'Your password has been updated. Sign in with your new password.' };
+    } catch {
+      return { success: false, message: 'We could not update your password right now. Request a new recovery link or contact support.' };
+    } finally {
+      this.passwordRecoveryUpdateInFlight = false;
     }
   }
 
