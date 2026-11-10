@@ -5,6 +5,7 @@ import { AuthService, SignUpParams } from '../src/services/auth';
 import { getAuthRedirectRoute } from '../src/services/authRouting';
 import { hasSupabaseAuthCallback } from '../src/services/supabase';
 import { completeMyWorkerOnboarding } from '../src/services/workerCloudData';
+import { createSafeAuthDiagnostic } from '../src/services/authDiagnostics';
 
 const PRODUCTION_ORIGIN = 'https://wurkup.sarthakjain5610.workers.dev';
 const storage = new Map<string, string>();
@@ -48,6 +49,7 @@ function makeClient() {
   let authCallback: ((event: string, session: { user: User } | null) => void) | null = null;
   let profileRole: 'worker' | 'contractor' = 'worker';
   let onboardingId = 'WKR-AUTH-TEST';
+  let rpcError: unknown = null;
   const profile = () => ({ id: 'auth-user-1', role: profileRole, full_name: 'Sunita Bai Verma', phone: '+91 9811122334' });
 
   const client = {
@@ -79,7 +81,9 @@ function makeClient() {
     }),
     rpc: async (name: string, args: any) => {
       calls.rpc.push({ name, args });
-      return { data: { worker_id: onboardingId }, error: null };
+      return rpcError
+        ? { data: null, error: rpcError }
+        : { data: { worker_id: onboardingId }, error: null };
     },
   };
 
@@ -93,6 +97,7 @@ function makeClient() {
     emitAuthEvent(event: string, session: { user: User } | null = { user }) { authSession = session; authCallback?.(event, session); },
     setProfileRole(role: 'worker' | 'contractor') { profileRole = role; },
     setOnboardingId(id: string) { onboardingId = id; },
+    setRpcError(error: unknown) { rpcError = error; },
   };
 }
 
@@ -381,6 +386,39 @@ await test('confirmed account can sign in and complete idempotent worker onboard
   const rpcMigration = await readFile(new URL('../supabase/migrations/20261102120000_worker_onboarding_conflict_target_fix.sql', import.meta.url), 'utf8');
   assert.match(rpcMigration, /ON CONFLICT \(user_id\) DO NOTHING/);
   assert.match(rpcMigration, /ON CONFLICT ON CONSTRAINT worker_private_data_pkey DO NOTHING/);
+});
+
+await test('safe auth diagnostics retain only stage, sanitized code and HTTP status', () => {
+  const diagnostic = createSafeAuthDiagnostic('worker_onboarding', {
+    code: '42501', status: 403, message: 'private row details', access_token: 'must-not-leak',
+  });
+  assert.deepEqual(diagnostic, { stage: 'worker_onboarding', code: '42501', status: 403 });
+  assert.equal(JSON.stringify(diagnostic).includes('private'), false);
+  assert.equal(JSON.stringify(diagnostic).includes('must-not-leak'), false);
+  assert.deepEqual(createSafeAuthDiagnostic('auth_signup', { code: 'bad code', status: 700, message: 'secret' }), { stage: 'auth_signup' });
+});
+
+await test('worker onboarding RPC failures are stage-tagged and shown without raw backend text', async () => {
+  const fake = makeClient();
+  fake.setRpcError({ code: '42501', status: 403, message: 'private database detail with token=secret' });
+  const originalWarn = console.warn;
+  const warnings: unknown[][] = [];
+  console.warn = (...args: unknown[]) => { warnings.push(args); };
+  try {
+    await assert.rejects(
+      completeMyWorkerOnboarding(baseParams.trade!, 'skilled', fake.client),
+      (error: Error) => {
+        assert.match(error.message, /could not confirm worker onboarding/i);
+        assert.equal(error.message.includes('private database detail'), false);
+        assert.equal(error.message.includes('secret'), false);
+        return true;
+      },
+    );
+  } finally { console.warn = originalWarn; }
+  assert.equal(warnings.length, 1);
+  assert.equal(JSON.stringify(warnings[0]).includes('worker_onboarding'), true);
+  assert.equal(JSON.stringify(warnings[0]).includes('private database detail'), false);
+  assert.equal(JSON.stringify(warnings[0]).includes('secret'), false);
 });
 
 await test('missing email is validation failure and makes no Auth request', async () => {

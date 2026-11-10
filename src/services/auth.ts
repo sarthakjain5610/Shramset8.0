@@ -15,6 +15,7 @@ import { UserProfile, UserRole, ContactVerificationStatus, ManualContactCheckRec
 import { initialSupabaseAuthCallbackPending, supabase } from './supabase';
 import { computeSha256Hex } from './cryptoAudit';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { reportAuthDiagnostic } from './authDiagnostics';
 
 const SESSION_STORAGE_KEY = 'shramsetu_auth_active_user';
 const REMEMBERED_ID_KEY = 'shramsetu_remembered_login_id';
@@ -207,7 +208,9 @@ export class AuthService {
         this.notify();
         return;
       }
+      const wasAuthCallbackPending = this.isAuthCallbackPending;
       if (this.isAuthCallbackPending) this.clearAuthCallbackPending();
+      if (wasAuthCallbackPending && session?.user) reportAuthDiagnostic('email_confirmation', { code: 'callback_session_received' });
       if (!session?.user) {
         this.currentUser = null;
         this.isJudgeDemo = false;
@@ -235,14 +238,20 @@ export class AuthService {
 
   private async loadAuthenticatedProfile(id: string): Promise<void> {
     if (!this.supabase) return;
-    const { data, error } = await this.supabase.from('profiles').select('id, role, full_name, phone').eq('id', id).single();
-    if (error || !data || !['worker', 'contractor'].includes(data.role)) {
-      this.currentUser = null; this.isJudgeDemo = false; this.notify(); return;
+    try {
+      const { data, error } = await this.supabase.from('profiles').select('id, role, full_name, phone').eq('id', id).single();
+      if (error || !data || !['worker', 'contractor'].includes(data.role)) {
+        reportAuthDiagnostic('profile_provisioning', error || { code: 'profile_missing' });
+        this.currentUser = null; this.isJudgeDemo = false; this.notify(); return;
+      }
+      this.currentUser = { id: data.id, fullName: data.full_name, phone: data.phone || '', role: data.role,
+        contactVerificationStatus: 'number_supplied', manualChecks: [], consentToShareContact: false, privacyAccepted: true,
+        qrReferenceToken: '', createdAt: new Date().toISOString(), isJudgeDemo: false };
+      this.isJudgeDemo = false; this.notify();
+    } catch (error) {
+      reportAuthDiagnostic('profile_provisioning', error);
+      this.currentUser = null; this.isJudgeDemo = false; this.notify();
     }
-    this.currentUser = { id: data.id, fullName: data.full_name, phone: data.phone || '', role: data.role,
-      contactVerificationStatus: 'number_supplied', manualChecks: [], consentToShareContact: false, privacyAccepted: true,
-      qrReferenceToken: '', createdAt: new Date().toISOString(), isJudgeDemo: false };
-    this.isJudgeDemo = false; this.notify();
   }
 
   private hasPersistedRecoveryState(): boolean {
@@ -341,6 +350,7 @@ export class AuthService {
         },
       });
       if (error) {
+        reportAuthDiagnostic('auth_signup', error);
         const mapped = classifySupabaseError(error, 'signup');
         return { success: false, kind: mapped.kind, error: mapped.message };
       }
@@ -367,6 +377,7 @@ export class AuthService {
       try { await this.supabase.auth.signOut(); } catch { /* keep the original safe status */ }
       return { success: true, state: 'profile_pending', email };
     } catch (error) {
+      reportAuthDiagnostic('auth_signup', error);
       const mapped = classifySupabaseError(error, 'signup');
       return { success: false, kind: mapped.kind, error: mapped.message };
     }
@@ -383,6 +394,7 @@ export class AuthService {
     try {
       const { data, error } = await this.supabase.auth.signInWithPassword({ email, password: params.password });
       if (error) {
+        reportAuthDiagnostic('sign_in', error);
         const mapped = classifySupabaseError(error, 'signin');
         return { success: false, kind: mapped.kind, error: mapped.message };
       }
@@ -393,6 +405,7 @@ export class AuthService {
       }
       return { success: true, user: this.currentUser };
     } catch (error) {
+      reportAuthDiagnostic('sign_in', error);
       const mapped = classifySupabaseError(error, 'signin');
       return { success: false, kind: mapped.kind, error: mapped.message };
     }
