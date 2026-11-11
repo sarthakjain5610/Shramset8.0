@@ -12,13 +12,48 @@
  */
 
 import { UserProfile, UserRole, ContactVerificationStatus, ManualContactCheckRecord } from '../types';
-import { supabase } from './supabase';
+import { initialSupabaseAuthCallbackPending, supabase } from './supabase';
 import { computeSha256Hex } from './cryptoAudit';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { reportAuthDiagnostic } from './authDiagnostics';
 
 const SESSION_STORAGE_KEY = 'shramsetu_auth_active_user';
 const REMEMBERED_ID_KEY = 'shramsetu_remembered_login_id';
 const LOCAL_USERS_KEY = 'shramsetu_registered_users_registry';
+const PASSWORD_RECOVERY_STORAGE_KEY = 'shramsetu_password_recovery_active';
+const PASSWORD_RECOVERY_COMPLETED_KEY = 'shramsetu_password_recovery_completed';
+const PASSWORD_MIN_LENGTH = 6;
+const INVALID_RECOVERY_LINK_MESSAGE = 'This password recovery link is invalid or has expired. Request a new recovery email or return to sign in.';
+
+function getRecoveryErrorFromUrl(): string | null {
+  if (typeof window === 'undefined' || !window.location) return null;
+  const hash = window.location.hash.replace(/^#\/?/, '');
+  const params = new URLSearchParams(`${window.location.search}&${hash}`);
+  const errorCode = params.get('error_code') || params.get('error');
+  return errorCode ? INVALID_RECOVERY_LINK_MESSAGE : null;
+}
+
+function stripAuthCallbackParams(url: URL): void {
+  const callbackKeys = ['code', 'error', 'error_code', 'error_description', 'access_token', 'refresh_token', 'token_type', 'expires_in', 'type', 'provider_token', 'provider_refresh_token'];
+  for (const key of callbackKeys) url.searchParams.delete(key);
+
+  const fragment = url.hash.slice(1);
+  if (!fragment) return;
+  if (fragment.startsWith('/')) {
+    const queryIndex = fragment.indexOf('?');
+    if (queryIndex < 0) return;
+    const route = fragment.slice(0, queryIndex);
+    const params = new URLSearchParams(fragment.slice(queryIndex + 1));
+    for (const key of callbackKeys) params.delete(key);
+    const query = params.toString();
+    url.hash = query ? `${route}?${query}` : route;
+    return;
+  }
+
+  const params = new URLSearchParams(fragment);
+  for (const key of callbackKeys) params.delete(key);
+  url.hash = params.toString();
+}
 
 export interface AuthState {
   user: UserProfile | null;
@@ -27,19 +62,35 @@ export interface AuthState {
   isJudgeDemo: boolean;
   isLoading: boolean;
   errorMessage: string | null;
+  isPasswordRecovery: boolean;
+  passwordRecoveryError: string | null;
+  passwordRecoveryCompleted: boolean;
+  isAuthCallbackPending: boolean;
 }
 
 export interface SignUpParams {
   role: 'worker' | 'contractor';
   fullName: string;
   phone: string;
-  email?: string;
-  password?: string;
+  email: string;
+  password: string;
   trade?: string;
   organizationName?: string;
   consentToShareContact: boolean;
   privacyAccepted: boolean;
 }
+
+export type AuthFailureKind = 'validation' | 'rate_limited' | 'already_registered' | 'invalid_credentials' | 'email_unconfirmed' | 'backend';
+
+export type SignUpResult =
+  | { success: true; state: 'authenticated'; user: UserProfile }
+  | { success: true; state: 'confirmation_pending'; email: string }
+  | { success: true; state: 'profile_pending'; email: string }
+  | { success: false; kind: AuthFailureKind; error: string };
+
+export type SignInResult =
+  | { success: true; user: UserProfile }
+  | { success: false; kind: AuthFailureKind; error: string };
 
 export interface SignInParams {
   loginId: string;
@@ -47,39 +98,189 @@ export interface SignInParams {
   rememberMe?: boolean;
 }
 
-class AuthService {
+function classifySupabaseError(error: unknown, context: 'signup' | 'signin' | 'recovery'): { kind: AuthFailureKind; message: string } {
+  const details = (error && typeof error === 'object' ? error : {}) as { code?: unknown; status?: unknown; message?: unknown };
+  const code = String(details.code || '').toLowerCase();
+  const message = String(details.message || '').toLowerCase();
+  const status = Number(details.status);
+
+  if (code === 'over_email_send_rate_limit') {
+    return {
+      kind: 'rate_limited',
+      message: context === 'recovery'
+        ? 'Too many recovery emails were requested. Wait before trying again; do not retry repeatedly. Contact support if the problem continues.'
+        : 'Too many confirmation emails were requested. Wait before trying again; do not retry repeatedly. Contact support if the problem continues.',
+    };
+  }
+  if (code === 'over_request_rate_limit' || status === 429) {
+    return { kind: 'rate_limited', message: 'Too many authentication requests were made. Wait before trying again and do not retry repeatedly.' };
+  }
+  if (code === 'user_already_exists' || code === 'email_exists' || /already (?:been )?registered|user already exists|email already exists/.test(message)) {
+    return { kind: 'already_registered', message: 'An account may already exist for this email. Sign in or use password recovery instead of registering again.' };
+  }
+  if (code === 'email_not_confirmed') {
+    return { kind: 'email_unconfirmed', message: 'Verify your email using the confirmation link before signing in.' };
+  }
+  if (context === 'signin' && (code === 'invalid_credentials' || code === 'invalid_grant' || /invalid login credentials/.test(message))) {
+    return { kind: 'invalid_credentials', message: 'Email or password is incorrect. If you have not verified your email, check your confirmation message first.' };
+  }
+  if (code === 'validation_failed' || code === 'weak_password' || code === 'email_address_invalid' || /invalid email|password.*(?:short|weak)|email.*invalid/.test(message)) {
+    return { kind: 'validation', message: 'Check the email address and password, then try again. Passwords must meet the minimum length shown in the form.' };
+  }
+  return {
+    kind: 'backend',
+    message: context === 'signup'
+      ? 'We could not confirm the registration result. Do not submit repeatedly; try signing in or password recovery, or contact support.'
+      : context === 'recovery'
+        ? 'We could not process the password recovery request right now. Please try again later or contact support.'
+        : 'We could not complete sign-in right now. Please try again later or contact support.',
+  };
+}
+
+export class AuthService {
   private currentUser: UserProfile | null = null;
   private isJudgeDemo = false;
-  private supabase: SupabaseClient | null = supabase;
+  private supabase: SupabaseClient | null;
   private listeners: ((state: AuthState) => void)[] = [];
+  private isPasswordRecovery = false;
+  private passwordRecoveryError: string | null = null;
+  private passwordRecoveryUpdateInFlight = false;
+  private passwordRecoveryCompleted = false;
+  private isAuthCallbackPending = false;
+  private authCallbackFallbackTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor() {
-    this.restoreRemoteSession();
+  constructor(
+    client: SupabaseClient | null = supabase,
+    restoreSession = true,
+    authCallbackPending = initialSupabaseAuthCallbackPending,
+  ) {
+    this.supabase = client;
+    this.passwordRecoveryError = getRecoveryErrorFromUrl();
+    this.passwordRecoveryCompleted = this.passwordRecoveryError ? false : this.hasPersistedRecoveryCompletion();
+    this.isPasswordRecovery = Boolean(this.passwordRecoveryError) || this.hasPersistedRecoveryState() || this.passwordRecoveryCompleted;
+    this.isAuthCallbackPending = authCallbackPending && !this.passwordRecoveryError;
+    if (this.passwordRecoveryError) {
+      this.persistRecoveryState(true);
+      this.persistRecoveryCompletion(false);
+    }
+    if (this.isAuthCallbackPending) {
+      // A failed URL callback may not emit any auth event; surface a safe recovery error rather than hanging.
+      this.authCallbackFallbackTimer = setTimeout(() => this.failPendingAuthCallback(), 8000);
+    }
+    if (restoreSession) this.restoreRemoteSession();
+  }
+
+  private clearAuthCallbackPending(): void {
+    this.isAuthCallbackPending = false;
+    if (this.authCallbackFallbackTimer) clearTimeout(this.authCallbackFallbackTimer);
+    this.authCallbackFallbackTimer = null;
+  }
+
+  private failPendingAuthCallback(): void {
+    if (!this.isAuthCallbackPending) return;
+    this.clearAuthCallbackPending();
+    this.isPasswordRecovery = true;
+    this.passwordRecoveryError = INVALID_RECOVERY_LINK_MESSAGE;
+    this.persistRecoveryState(true);
+    this.persistRecoveryCompletion(false);
+    this.notify();
   }
 
   private async restoreRemoteSession(): Promise<void> {
     if (!this.supabase) return;
-    const { data: { subscription } } = this.supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session?.user) { this.currentUser = null; this.isJudgeDemo = false; this.notify(); return; }
+    const { data: { subscription } } = this.supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        this.clearAuthCallbackPending();
+        this.isPasswordRecovery = true;
+        this.passwordRecoveryError = null;
+        this.passwordRecoveryCompleted = false;
+        this.persistRecoveryState(true);
+        this.persistRecoveryCompletion(false);
+        // The recovery screen needs the Supabase session, not a role/profile lookup.
+        this.currentUser = null;
+        this.isJudgeDemo = false;
+        this.notify();
+        return;
+      }
+      // Supabase emits INITIAL_SESSION as part of client startup; it can precede the
+      // deferred PASSWORD_RECOVERY callback. Keep routing gated until the real event.
+      if (event === 'INITIAL_SESSION' && this.isAuthCallbackPending) {
+        this.notify();
+        return;
+      }
+      const wasAuthCallbackPending = this.isAuthCallbackPending;
+      if (this.isAuthCallbackPending) this.clearAuthCallbackPending();
+      if (wasAuthCallbackPending && session?.user) reportAuthDiagnostic('email_confirmation', { code: 'callback_session_received' });
+      if (!session?.user) {
+        this.currentUser = null;
+        this.isJudgeDemo = false;
+        if (event === 'SIGNED_OUT') {
+          this.isPasswordRecovery = false;
+          this.passwordRecoveryError = null;
+          this.persistRecoveryState(false);
+        }
+        this.notify();
+        return;
+      }
       // Defer network work until Supabase's auth callback has returned.
       queueMicrotask(() => { void this.loadAuthenticatedProfile(session.user.id); });
+      this.notify();
     });
     void subscription;
     const { data, error } = await this.supabase.auth.getSession();
-    if (!error && data.session?.user) await this.loadAuthenticatedProfile(data.session.user.id);
-    else { this.currentUser = null; this.notify(); }
+    if (!error && data.session?.user && !this.isPasswordRecovery && !this.isAuthCallbackPending) await this.loadAuthenticatedProfile(data.session.user.id);
+    else if (error || !data.session?.user) {
+      this.currentUser = null;
+      if (this.isAuthCallbackPending) this.failPendingAuthCallback();
+      else this.notify();
+    } else this.notify();
   }
 
   private async loadAuthenticatedProfile(id: string): Promise<void> {
     if (!this.supabase) return;
-    const { data, error } = await this.supabase.from('profiles').select('id, role, full_name, phone').eq('id', id).single();
-    if (error || !data || !['worker', 'contractor'].includes(data.role)) {
-      this.currentUser = null; this.isJudgeDemo = false; this.notify(); return;
+    try {
+      const { data, error } = await this.supabase.from('profiles').select('id, role, full_name, phone').eq('id', id).single();
+      if (error || !data || !['worker', 'contractor'].includes(data.role)) {
+        reportAuthDiagnostic('profile_provisioning', error || { code: 'profile_missing' });
+        this.currentUser = null; this.isJudgeDemo = false; this.notify(); return;
+      }
+      this.currentUser = { id: data.id, fullName: data.full_name, phone: data.phone || '', role: data.role,
+        contactVerificationStatus: 'number_supplied', manualChecks: [], consentToShareContact: false, privacyAccepted: true,
+        qrReferenceToken: '', createdAt: new Date().toISOString(), isJudgeDemo: false };
+      this.isJudgeDemo = false; this.notify();
+    } catch (error) {
+      reportAuthDiagnostic('profile_provisioning', error);
+      this.currentUser = null; this.isJudgeDemo = false; this.notify();
     }
-    this.currentUser = { id: data.id, fullName: data.full_name, phone: data.phone || '', role: data.role,
-      contactVerificationStatus: 'number_supplied', manualChecks: [], consentToShareContact: false, privacyAccepted: true,
-      qrReferenceToken: '', createdAt: new Date().toISOString(), isJudgeDemo: false };
-    this.isJudgeDemo = false; this.notify();
+  }
+
+  private hasPersistedRecoveryState(): boolean {
+    if (typeof window === 'undefined') return false;
+    try { return window.sessionStorage.getItem(PASSWORD_RECOVERY_STORAGE_KEY) === 'true'; } catch { return false; }
+  }
+
+  private persistRecoveryState(active: boolean): void {
+    if (typeof window === 'undefined') return;
+    try {
+      if (active) window.sessionStorage.setItem(PASSWORD_RECOVERY_STORAGE_KEY, 'true');
+      else {
+        window.sessionStorage.removeItem(PASSWORD_RECOVERY_STORAGE_KEY);
+        window.sessionStorage.removeItem(PASSWORD_RECOVERY_COMPLETED_KEY);
+      }
+    } catch { /* session storage is a convenience, never the authorization source */ }
+  }
+
+  private hasPersistedRecoveryCompletion(): boolean {
+    if (typeof window === 'undefined') return false;
+    try { return window.sessionStorage.getItem(PASSWORD_RECOVERY_COMPLETED_KEY) === 'true'; } catch { return false; }
+  }
+
+  private persistRecoveryCompletion(completed: boolean): void {
+    if (typeof window === 'undefined') return;
+    try {
+      if (completed) window.sessionStorage.setItem(PASSWORD_RECOVERY_COMPLETED_KEY, 'true');
+      else window.sessionStorage.removeItem(PASSWORD_RECOVERY_COMPLETED_KEY);
+    } catch { /* non-sensitive UI state only */ }
   }
 
   public getAuthState(): AuthState {
@@ -91,6 +292,10 @@ class AuthService {
       isJudgeDemo: this.isJudgeDemo,
       isLoading: false,
       errorMessage: null,
+      isPasswordRecovery: this.isPasswordRecovery,
+      passwordRecoveryError: this.passwordRecoveryError,
+      passwordRecoveryCompleted: this.passwordRecoveryCompleted,
+      isAuthCallbackPending: this.isAuthCallbackPending,
     };
   }
 
@@ -119,35 +324,91 @@ class AuthService {
   /**
    * Register a new Worker or Contractor
    */
-  public async signUp(params: SignUpParams): Promise<{ success: boolean; user?: UserProfile; error?: string }> {
-    if (!this.supabase) return { success: false, error: 'Cloud authentication is not configured. Use explicitly labelled Local Demo Mode.' };
-    if (!['worker', 'contractor'].includes(params.role)) return { success: false, error: 'Unsupported account role.' };
-    if (!params.fullName?.trim() || !params.phone?.trim() || !params.email || !params.password)
-      return { success: false, error: 'Name, phone, email and password are required.' };
-    if (!params.privacyAccepted) return { success: false, error: 'Privacy consent is required.' };
-    const { data, error } = await this.supabase.auth.signUp({ email: params.email.trim(), password: params.password,
-      options: { data: { full_name: params.fullName.trim(), phone: params.phone.trim(), signup_role: params.role }, emailRedirectTo: window.location.origin } });
-    if (error) return { success: false, error: error.message };
-    if (!data.user) return { success: false, error: 'Supabase did not return an account.' };
-    // The requested public role is passed only as signup metadata; the database trigger constrains it to worker/contractor.
-    if (!data.session) return { success: true }; // Email confirmation is enabled; profile is provisioned by the database trigger.
-    await this.loadAuthenticatedProfile(data.user.id);
-    return this.currentUser ? { success: true, user: this.currentUser } : { success: false, error: 'Account created; profile role is not provisioned. Contact support or apply the database migration.' };
+  public async signUp(params: SignUpParams): Promise<SignUpResult> {
+    if (!this.supabase) return { success: false, kind: 'backend', error: 'Cloud authentication is not configured. Use explicitly labelled Local Demo Mode.' };
+    const email = params.email?.trim() || '';
+    if (!['worker', 'contractor'].includes(params.role)) return { success: false, kind: 'validation', error: 'Unsupported account role.' };
+    if (!params.fullName?.trim() || !params.phone?.trim() || !email || !params.password) {
+      return { success: false, kind: 'validation', error: 'Name, phone, email and password are required. Email is required for every account while phone sign-in is disabled.' };
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return { success: false, kind: 'validation', error: 'Enter a valid email address.' };
+    }
+    if (params.password.length < 6) return { success: false, kind: 'validation', error: 'Choose a password with at least 6 characters.' };
+    if (!params.privacyAccepted) return { success: false, kind: 'validation', error: 'Privacy consent is required.' };
+
+    try {
+      // Supabase Site URL and the production redirect allow-list include this origin.
+      // Use the origin only (not a path or arbitrary user-provided URL).
+      const emailRedirectTo = typeof window !== 'undefined' ? window.location.origin : undefined;
+      const { data, error } = await this.supabase.auth.signUp({
+        email,
+        password: params.password,
+        options: {
+          data: { full_name: params.fullName.trim(), phone: params.phone.trim(), signup_role: params.role },
+          ...(emailRedirectTo ? { emailRedirectTo } : {}),
+        },
+      });
+      if (error) {
+        reportAuthDiagnostic('auth_signup', error);
+        const mapped = classifySupabaseError(error, 'signup');
+        return { success: false, kind: mapped.kind, error: mapped.message };
+      }
+      if (!data.user) {
+        return { success: false, kind: 'backend', error: 'We could not confirm the registration result. Do not submit repeatedly; try signing in or password recovery, or contact support.' };
+      }
+      // Supabase can obscure duplicate-email errors by returning a user with no identities.
+      // Treat that as an existing account; never attempt a second Auth/profile/worker insert.
+      if (Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        return { success: false, kind: 'already_registered', error: 'An account may already exist for this email. Sign in or use password recovery instead of registering again.' };
+      }
+      if (!data.session) return { success: true, state: 'confirmation_pending', email };
+
+      // The role is passed only as user metadata. The database trigger constrains it
+      // and creates the profile; workers are created later by the idempotent RPC.
+      try {
+        await this.loadAuthenticatedProfile(data.user.id);
+      } catch {
+        this.currentUser = null;
+      }
+      if (this.currentUser) return { success: true, state: 'authenticated', user: this.currentUser };
+
+      // Auth creation already succeeded; sign out and do not ask the user to register again.
+      try { await this.supabase.auth.signOut(); } catch { /* keep the original safe status */ }
+      return { success: true, state: 'profile_pending', email };
+    } catch (error) {
+      reportAuthDiagnostic('auth_signup', error);
+      const mapped = classifySupabaseError(error, 'signup');
+      return { success: false, kind: mapped.kind, error: mapped.message };
+    }
   }
 
-  /**
-   * Sign In with Email or Mobile Number
-   */
-  public async signIn(params: SignInParams): Promise<{ success: boolean; user?: UserProfile; error?: string }> {
+  /** Sign in with the email address used at registration. Phone auth is disabled. */
+  public async signIn(params: SignInParams): Promise<SignInResult> {
     const email = params.loginId.trim();
     if (params.rememberMe) this.setRememberedLoginId(email); else this.clearRememberedLoginId();
-    if (!this.supabase) return { success: false, error: 'Cloud authentication is not configured. Local accounts are not accepted here; choose Local Demo Mode explicitly.' };
-    if (!email.includes('@') || !params.password) return { success: false, error: 'Use your registered email and password.' };
-    const { data, error } = await this.supabase.auth.signInWithPassword({ email, password: params.password });
-    if (error) return { success: false, error: error.message };
-    await this.loadAuthenticatedProfile(data.user.id);
-    if (!this.currentUser) { await this.supabase.auth.signOut(); return { success: false, error: 'Authenticated user has no valid worker/contractor profile.' }; }
-    return { success: true, user: this.currentUser };
+    if (!this.supabase) return { success: false, kind: 'backend', error: 'Cloud authentication is not configured. Local accounts are not accepted here; choose Local Demo Mode explicitly.' };
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !params.password) {
+      return { success: false, kind: 'validation', error: 'Use your registered email address and password.' };
+    }
+    try {
+      const { data, error } = await this.supabase.auth.signInWithPassword({ email, password: params.password });
+      if (error) {
+        reportAuthDiagnostic('sign_in', error);
+        const mapped = classifySupabaseError(error, 'signin');
+        return { success: false, kind: mapped.kind, error: mapped.message };
+      }
+      await this.loadAuthenticatedProfile(data.user.id);
+      if (!this.currentUser) {
+        await this.supabase.auth.signOut();
+        return { success: false, kind: 'backend', error: 'The account is authenticated but its WurkUp profile is not available. Contact support; do not register again.' };
+      }
+      return { success: true, user: this.currentUser };
+    } catch (error) {
+      reportAuthDiagnostic('sign_in', error);
+      const mapped = classifySupabaseError(error, 'signin');
+      return { success: false, kind: mapped.kind, error: mapped.message };
+    }
   }
 
   /**
@@ -164,6 +425,11 @@ class AuthService {
 
     this.currentUser = null;
     this.isJudgeDemo = false;
+    this.isPasswordRecovery = false;
+    this.passwordRecoveryError = null;
+    this.passwordRecoveryCompleted = false;
+    this.isAuthCallbackPending = false;
+    this.persistRecoveryState(false);
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(SESSION_STORAGE_KEY);
     }
@@ -174,18 +440,69 @@ class AuthService {
    * Password Recovery Request
    */
   public async requestPasswordRecovery(email: string): Promise<{ success: boolean; message: string }> {
-    if (!email || !email.includes('@')) {
+    const normalizedEmail = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       return { success: false, message: 'Please enter a valid email address.' };
     }
 
     if (!this.supabase) return { success: false, message: 'Cloud authentication is not configured.' };
-    const { error } = await this.supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
-    if (error) return { success: false, message: error.message };
+    try {
+      const redirectTo = typeof window !== 'undefined' ? window.location.origin : undefined;
+      const { error } = await this.supabase.auth.resetPasswordForEmail(normalizedEmail, redirectTo ? { redirectTo } : undefined);
+      if (error) return { success: false, message: classifySupabaseError(error, 'recovery').message };
+      return {
+        success: true,
+        message: `If an account is associated with ${normalizedEmail}, password reset instructions have been dispatched.`,
+      };
+    } catch {
+      return { success: false, message: 'We could not process the password recovery request right now. Please try again later or contact support.' };
+    }
+  }
 
-    return {
-      success: true,
-      message: `If an account is associated with ${email}, password reset instructions have been dispatched.`,
-    };
+  /** Leave the recovery form after an invalid/expired link and remove safe error callback parameters. */
+  public async dismissPasswordRecovery(): Promise<void> {
+    await this.signOut();
+    if (typeof window === 'undefined' || !window.location || typeof window.history?.replaceState !== 'function') return;
+    try {
+      const url = new URL(window.location.href);
+      stripAuthCallbackParams(url);
+      window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+    } catch { /* callback cleanup is best-effort and never affects authentication */ }
+  }
+
+  /** Update a password only from an active, valid Supabase recovery session. */
+  public async updatePasswordFromRecovery(password: string): Promise<{ success: boolean; message: string }> {
+    if (!this.supabase) return { success: false, message: 'Cloud authentication is not configured.' };
+    if (!this.isPasswordRecovery || this.passwordRecoveryError) {
+      return { success: false, message: this.passwordRecoveryError || INVALID_RECOVERY_LINK_MESSAGE };
+    }
+    if (this.passwordRecoveryUpdateInFlight || this.passwordRecoveryCompleted) {
+      return { success: false, message: 'This password update is already being processed. If it succeeded, sign in with your new password.' };
+    }
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      return { success: false, message: `Choose a password with at least ${PASSWORD_MIN_LENGTH} characters.` };
+    }
+
+    this.passwordRecoveryUpdateInFlight = true;
+    try {
+      const { data, error: sessionError } = await this.supabase.auth.getSession();
+      if (sessionError || !data.session) {
+        this.passwordRecoveryError = INVALID_RECOVERY_LINK_MESSAGE;
+        this.notify();
+        return { success: false, message: INVALID_RECOVERY_LINK_MESSAGE };
+      }
+      const { error } = await this.supabase.auth.updateUser({ password });
+      if (error) return { success: false, message: classifySupabaseError(error, 'recovery').message };
+
+      this.passwordRecoveryCompleted = true;
+      this.persistRecoveryCompletion(true);
+      this.notify();
+      return { success: true, message: 'Your password has been updated. Sign in with your new password.' };
+    } catch {
+      return { success: false, message: 'We could not update your password right now. Request a new recovery link or contact support.' };
+    } finally {
+      this.passwordRecoveryUpdateInFlight = false;
+    }
   }
 
   /**

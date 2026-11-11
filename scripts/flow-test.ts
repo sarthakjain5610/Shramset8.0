@@ -212,6 +212,7 @@ try {
   const inputs = Array.from(container.querySelectorAll('input'));
   const nameInput = inputs.find((i) => i.id === 'full-name') as HTMLInputElement | undefined;
   const phoneInput = inputs.find((i) => i.id === 'phone') as HTMLInputElement | undefined;
+  const emailInput = inputs.find((i) => i.id === 'email') as HTMLInputElement | undefined;
   const passInput = inputs.find((i) => i.id === 'new-password') as HTMLInputElement | undefined;
   const privacy = inputs.find((i) => i.type === 'checkbox' && i.hasAttribute('required')) as
     | HTMLInputElement
@@ -229,6 +230,7 @@ try {
 
   await setValue(nameInput, 'Sunita Bai Verma');
   await setValue(phoneInput, '+91 98111 22334');
+  await setValue(emailInput, 'sunita@example.test');
   await setValue(passInput, 'worker123');
   if (privacy) {
     await act(async () => {
@@ -244,9 +246,21 @@ try {
   });
   await flush(160);
 
-  record('Real sign-up without cloud credentials is rejected', text().toLowerCase().includes('cloud authentication') || text().toLowerCase().includes('email'));
+  record('Real sign-up without cloud credentials is rejected', text().toLowerCase().includes('cloud authentication'));
   record('Rejected sign-up does not open an authenticated portal', !text().includes('Worker account'));
-  record('Sign-in route remains available after rejected signup', w.location.hash.includes('create-account') || text().toLowerCase().includes('error'));
+  record('Sign-in route remains available after rejected signup', w.location.hash.includes('create-account'));
+
+  const { auth: authService } = await import('../src/services/auth');
+  const originalSignUp = authService.signUp.bind(authService);
+  authService.signUp = async (params) => ({ success: true, state: 'confirmation_pending', email: params.email });
+  await act(async () => {
+    (form as HTMLFormElement).requestSubmit?.();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+  });
+  await flush(40);
+  record('Pending signup shows accepted confirmation status', !!container.querySelector('[role="status"]') && text().includes('Registration was accepted') && text().includes('Verify your email'));
+  record('Pending signup hides registration form to prevent duplicate email sends', !container.querySelector('#create-account') && !container.querySelector('form'));
+  authService.signUp = originalSignUp;
 
   // ---- Judge demo --------------------------------------------------------
   await goto('#/sign-in');

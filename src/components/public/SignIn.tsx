@@ -32,7 +32,7 @@ export const SignIn: React.FC<SignInProps> = ({ onNavigate, onEnterJudgeDemo }) 
     setError(null);
 
     if (!loginId.trim()) {
-      setError('Please enter your registered mobile number or email address.');
+      setError('Please enter your registered email address. Phone sign-in is not enabled.');
       return;
     }
 
@@ -44,10 +44,10 @@ export const SignIn: React.FC<SignInProps> = ({ onNavigate, onEnterJudgeDemo }) 
     });
     setIsLoading(false);
 
-    if (res.success && res.user) {
+    if (res.success) {
       onNavigate(res.user.role === 'worker' ? 'worker' : 'contractor');
     } else {
-      setError(res.error || 'Sign in failed. Please check your credentials.');
+      setError(res.error);
     }
   };
 
@@ -103,18 +103,18 @@ export const SignIn: React.FC<SignInProps> = ({ onNavigate, onEnterJudgeDemo }) 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="login-id" className="label">
-            Mobile number or email
+            Email address
           </label>
           <div className="relative">
             <Phone className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
             <input
               id="login-id"
-              type="text"
+              type="email"
               required
               autoComplete="username"
               value={loginId}
               onChange={(e) => setLoginId(e.target.value)}
-              placeholder="+91 98260 12345 or name@example.com"
+              placeholder="name@example.com"
               className="field field-icon"
             />
           </div>

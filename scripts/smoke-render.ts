@@ -70,6 +70,7 @@ try {
   const { CreateAccount } = await import('../src/components/public/CreateAccount');
   const { SignIn } = await import('../src/components/public/SignIn');
   const { PasswordRecovery } = await import('../src/components/public/PasswordRecovery');
+  const { ResetPassword } = await import('../src/components/public/ResetPassword');
   const { Privacy } = await import('../src/components/public/Privacy');
   const { HelpContact } = await import('../src/components/public/HelpContact');
   const { About } = await import('../src/components/public/About');
@@ -81,6 +82,7 @@ try {
     ['CreateAccount', CreateAccount, ['Set up your WurkUp record']],
     ['SignIn', SignIn, ['Sign in to your portal']],
     ['PasswordRecovery', PasswordRecovery, ['Reset your password']],
+    ['ResetPassword', ResetPassword, ['Choose a new password', 'Confirm new password']],
     ['Privacy', Privacy, ['Privacy']],
     ['HelpContact', HelpContact, ['human on the line']],
     ['About', About, ['Built in Indore']],
@@ -93,12 +95,39 @@ try {
           onNavigate: nav,
           onEnterJudgeDemo: nav,
           lang: 'en',
+          recoveryError: null,
         })
       );
       check(name, html, needles);
     } catch (error: any) {
       results.push({ name, ok: false, error: error?.message ?? String(error) });
     }
+  }
+
+  try {
+    const expiredHtml = renderToString(React.createElement(ResetPassword, {
+      onNavigate: nav,
+      lang: 'en',
+      recoveryError: 'This password recovery link is invalid or has expired.',
+      recoveryComplete: false,
+    }));
+    check('ResetPassword expired-link guidance', expiredHtml, ['Recovery link unavailable', 'Request a new recovery email']);
+  } catch (error: any) {
+    results.push({ name: 'ResetPassword expired-link guidance', ok: false, error: error?.message ?? String(error) });
+  }
+
+  try {
+    const completedHtml = renderToString(React.createElement(ResetPassword, {
+      onNavigate: nav,
+      lang: 'en',
+      recoveryError: null,
+      recoveryComplete: true,
+    }));
+    const hasConfirmation = completedHtml.includes('Password updated') && completedHtml.includes('Continue to sign in');
+    const hidesForm = !completedHtml.includes('New password');
+    results.push({ name: 'ResetPassword success confirmation', ok: hasConfirmation && hidesForm });
+  } catch (error: any) {
+    results.push({ name: 'ResetPassword success confirmation', ok: false, error: error?.message ?? String(error) });
   }
 } catch (error: any) {
   results.push({ name: 'App shell', ok: false, error: error?.message ?? String(error) });
