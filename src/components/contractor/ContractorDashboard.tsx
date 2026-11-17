@@ -1193,7 +1193,7 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-ink-900 text-sm capitalize">{g.disputeType.replace('_', ' ')}</span>
-                        <span className="font-mono text-[10px] text-ink-500">Ref: {g.dloFilingRef}</span>
+                        <span className="font-mono text-[10px] text-ink-500">WURK UP ref: {g.dloFilingRef}</span>
                       </div>
                       <p className="text-ink-500 mt-0.5">Worker: <span className="font-semibold text-ink-800">{g.workerName}</span> ({g.workerPhone})</p>
                     </div>

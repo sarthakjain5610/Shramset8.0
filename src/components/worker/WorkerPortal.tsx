@@ -31,6 +31,7 @@ import { WorkerCard } from '../WorkerCard';
 import { ContactVerificationModal } from '../ContactVerificationModal';
 import { buildVerifyUrl } from '../../services/verifyLink';
 import { WorkerDashboard } from '../dashboard/worker/WorkerDashboard';
+import { buildSubmissionReference } from '../../services/submissionReference';
 
 interface WorkerPortalProps {
   user: UserProfile;
@@ -166,7 +167,8 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
       filingDate: new Date().toISOString().split('T')[0],
       status: 'submitted',
       description: disputeDesc.trim(),
-      dloFilingRef: `MP-DLO-IND-${Date.now().toString().slice(-5)}`,
+      // WURK UP internal submission reference; nothing is filed with a government office.
+      dloFilingRef: buildSubmissionReference(),
       evidenceMusterCount: attendance.length,
       isDemoRecord: user.isJudgeDemo,
     };
@@ -730,7 +732,7 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-bold text-ink-900">Dispute & Grievance Redressal (Samadhan)</h2>
-              <p className="text-xs text-ink-500">File formal wage disagreements under MP BOCW and DLO standards</p>
+              <p className="text-xs text-ink-500">Record wage disagreements in WURK UP with a documented evidence trail</p>
             </div>
             <button
               onClick={() => setShowNewDisputeModal(true)}
@@ -743,7 +745,7 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
 
           {grievances.length === 0 ? (
             <div className="bg-white rounded-2xl border border-sand-200 p-8 text-center text-xs text-ink-500">
-              No disputes logged. If a contractor underpays, denies recorded shifts, or makes arbitrary deductions, click "File Dispute" to generate an official claim.
+              No grievances logged. If a contractor underpays, denies recorded shifts, or makes arbitrary deductions, click "File Dispute" to record a documented grievance in WURK UP.
             </div>
           ) : (
             <div className="space-y-3">
@@ -753,7 +755,7 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-ink-900 text-sm capitalize">{g.disputeType.replace('_', ' ')}</span>
-                        <span className="font-mono text-[10px] text-ink-500">Ref: {g.dloFilingRef}</span>
+                        <span className="font-mono text-[10px] text-ink-500">WURK UP ref: {g.dloFilingRef}</span>
                       </div>
                       <p className="text-ink-500 mt-0.5">Contractor: {g.contractorName} · Site: {g.siteName}</p>
                     </div>
@@ -881,8 +883,8 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
                   <p className="text-[11px] text-ink-500 mt-0.5 truncate">
                     {bi(
                       lang,
-                      'Preserved in cryptographic audit chain for Indore DLO.',
-                      'क्रिप्टोग्राफिक ऑडिट चेन में सुरक्षित और इंदौर श्रम अधिकारी हेतु प्रपत्र।'
+                      'Internal WURK UP record — not a government filing.',
+                      'WURK UP आंतरिक रिकॉर्ड — सरकारी फाइलिंग नहीं।'
                     )}
                   </p>
                 </div>

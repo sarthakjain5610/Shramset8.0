@@ -429,7 +429,7 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
                     </div>
                   </a>
 
-                  {/* Option: DLO Helpline Call */}
+                  {/* Option: WURK UP support helpline */}
                   <a
                     href={`tel:${APP_CONFIG.CONTACT_PHONE}`}
                     role="menuitem"
@@ -441,7 +441,7 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
                     </div>
                     <div className="min-w-0">
                       <div className="font-bold text-forest-900">{t('callDloHelpline', lang)}</div>
-                      <div className="text-[10px] text-forest-600 font-mono truncate">{APP_CONFIG.CONTACT_PHONE} (0731)</div>
+                      <div className="text-[10px] text-forest-600 font-mono truncate">{APP_CONFIG.CONTACT_PHONE_DISPLAY}</div>
                     </div>
                   </a>
                 </div>

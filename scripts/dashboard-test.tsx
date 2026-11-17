@@ -82,7 +82,16 @@ import {
   type NewDisputeInput,
 } from '../src/services/dashboardData';
 import { allDashboardKeys, dashboardCopy, dc } from '../src/components/dashboard/dashboardCopy';
-import type { CloudWorkerDirectoryRecord, UserProfile } from '../src/types';
+import {
+  buildSubmissionReference,
+  isSubmissionReference,
+  isLegacyGovernmentStyleReference,
+  referenceDate,
+  localIsoDate,
+  SUBMISSION_REFERENCE_PREFIX,
+} from '../src/services/submissionReference';
+import type { CloudWorkerDirectoryRecord, UserProfile, Worker, DisputeGrievance } from '../src/types';
+import { GrievanceRedressal } from '../src/components/GrievanceRedressal';
 import { WorkerOverview } from '../src/components/dashboard/worker/WorkerOverview';
 import { WorkerAttendance } from '../src/components/dashboard/worker/WorkerAttendance';
 import { WorkerWages } from '../src/components/dashboard/worker/WorkerWages';
@@ -260,7 +269,7 @@ const disputes: CloudDisputeRow[] = [
     filing_date: isoDaysAgo(4),
     status: 'under_inquiry',
     description: 'Two shifts were recorded but the weekly settlement did not include them.',
-    dlo_filing_ref: 'DLO-20261107-ABC123',
+    dlo_filing_ref: 'WU-DSP-20261107-4H7K2M9QXB',
     evidence_muster_count: 2,
   },
 ];
@@ -427,6 +436,92 @@ check('dispute ageing is non-negative', daysOpen(disputes[0].filing_date) >= 0);
 check('dispute ageing for future date is zero', daysOpen(isoDaysAgo(-5)) === 0);
 
 /* ------------------------------------------------------------------------- */
+/* 4b. Grievance submission references (WURK UP, never a government filing)    */
+/* ------------------------------------------------------------------------- */
+
+const sampleRef = buildSubmissionReference(new Date(2026, 10, 11));
+check(
+  'reference uses the WU-DSP prefix',
+  sampleRef.startsWith(`${SUBMISSION_REFERENCE_PREFIX}-`),
+  sampleRef
+);
+check('reference encodes the local date', sampleRef.startsWith('WU-DSP-20261111-'), sampleRef);
+check('reference matches WU-DSP-YYYYMMDD-XXXXXXXXXX', /^WU-DSP-\d{8}-[0-9A-HJ-NP-Z]{10}$/.test(sampleRef), sampleRef);
+check('reference body is exactly 10 characters', sampleRef.split('-')[3].length === 10, sampleRef);
+check('reference alphabet avoids I and O', !/[IO]/.test(sampleRef.split('-')[3]), sampleRef);
+check('isSubmissionReference accepts generated values', isSubmissionReference(sampleRef));
+check('referenceDate round-trips the encoded date', referenceDate(sampleRef) === '2026-11-11', String(referenceDate(sampleRef)));
+check('localIsoDate is zero padded', /^\d{4}-\d{2}-\d{2}$/.test(localIsoDate(new Date(2026, 0, 5))));
+
+const manyRefs = new Set(Array.from({ length: 250 }, () => buildSubmissionReference()));
+check('references are effectively unique', manyRefs.size === 250, String(manyRefs.size));
+check(
+  'every generated reference validates',
+  Array.from(manyRefs).every((value) => isSubmissionReference(value))
+);
+
+check('empty reference rejected', !isSubmissionReference(''));
+check('null reference rejected', !isSubmissionReference(null));
+check('old DLO value is not a WURK UP reference', !isSubmissionReference('DLO-20261107-ABC123'));
+check('DLO values are detected as legacy', isLegacyGovernmentStyleReference('DLO-20261107-ABC123'));
+check('MP-DLO values are detected as legacy', isLegacyGovernmentStyleReference('MP-DLO-IND-41293'));
+check('WURK UP values are not legacy', !isLegacyGovernmentStyleReference(sampleRef));
+check('legacy detection ignores empty', !isLegacyGovernmentStyleReference(undefined));
+
+// The deployed storage column must keep its historical name: no migration, no rewrite.
+check(
+  'deployed storage column name is preserved',
+  DISPUTE_COLUMNS.includes('dlo_filing_ref'),
+  DISPUTE_COLUMNS
+);
+
+// No worker-facing dispute label may call the reference a DLO filing.
+const disputeCopyKeys = [
+  'disputesHeading',
+  'disputesSub',
+  'disputesReference',
+  'disputesFormTitle',
+  'disputesFormSub',
+  'disputesSubmitted',
+  'disputesDisclaimerTitle',
+  'disputesDisclaimerBody',
+  'disputesNotOfficial',
+  'contractorDisputesSub',
+] as const;
+const dloMentions = disputeCopyKeys.filter((key) =>
+  /\bDLO\b/.test(dashboardCopy.en[key]) || /DLO/.test(dashboardCopy.hi[key])
+);
+check('no dispute label mentions DLO as the filing authority', dloMentions.length === 0, dloMentions.join(','));
+check(
+  'English reference label names WURK UP',
+  dashboardCopy.en.disputesReference === 'WURK UP submission reference',
+  dashboardCopy.en.disputesReference
+);
+check(
+  'Hindi reference label names WURK UP',
+  dashboardCopy.hi.disputesReference.includes('WURK UP'),
+  dashboardCopy.hi.disputesReference
+);
+check(
+  'English disclaimer states no government filing',
+  /District Labour Office/.test(dashboardCopy.en.disputesDisclaimerBody) &&
+    /does not forward/i.test(dashboardCopy.en.disputesDisclaimerBody)
+);
+check(
+  'Hindi disclaimer states no government filing',
+  /जिला श्रम पदाधिकारी/.test(dashboardCopy.hi.disputesDisclaimerBody) &&
+    dashboardCopy.hi.disputesDisclaimerBody.includes('नहीं भेजता')
+);
+check(
+  'English short notice is explicit',
+  /not a District Labour Office or government filing/i.test(dashboardCopy.en.disputesNotOfficial)
+);
+check(
+  'Hindi short notice is explicit',
+  dashboardCopy.hi.disputesNotOfficial.includes('नहीं')
+);
+
+/* ------------------------------------------------------------------------- */
 /* 5. Validation and error mapping                                            */
 /* ------------------------------------------------------------------------- */
 
@@ -563,7 +658,7 @@ const disputesHtml = render(
     onChanged: noop,
   })
 );
-check('disputes panel renders DLO reference', disputesHtml.includes('DLO-20261107-ABC123'));
+check('grievance history renders the WURK UP reference', disputesHtml.includes('WU-DSP-20261107-4H7K2M9QXB'));
 check('disputes panel renders claim', disputesHtml.includes('₹1,500'));
 check('disputes panel exposes filing action', disputesHtml.includes('File a dispute'));
 
@@ -648,6 +743,202 @@ const contractorDisputesHtml = render(
 );
 check('contractor disputes renders response state', contractorDisputesHtml.includes('No contractor response recorded yet.'));
 check('contractor disputes is read-only', contractorDisputesHtml.includes('Read-only'));
+
+/* ------------------------------------------------------------------------- */
+/* 9. Grievance submission experience (interactive, jsdom)                    */
+/* ------------------------------------------------------------------------- */
+
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+const { createRoot } = await import('react-dom/client');
+const { act } = await import('react');
+
+const legacyDisputes: CloudDisputeRow[] = [
+  {
+    ...disputes[0],
+    id: 'DSP-LEGACY',
+    dlo_filing_ref: 'DLO-IND-WAGE-2026/0419',
+    filing_date: isoDaysAgo(120),
+    description: 'Legacy row recorded before the reference terminology correction.',
+  },
+  ...disputes,
+];
+
+async function openGrievanceForm(lang: 'en' | 'hi') {
+  const host = w.document.createElement('div');
+  w.document.body.appendChild(host);
+  const root = createRoot(host);
+  await act(async () => {
+    root.render(
+      React.createElement(WorkerDisputes, {
+        lang,
+        worker,
+        disputes: legacyDisputes,
+        attendance,
+        onChanged: noop,
+      })
+    );
+  });
+  const beforeOpen = host.textContent || '';
+  const openButton = Array.from(host.querySelectorAll('button')).find((button) =>
+    (button.textContent || '').includes(dashboardCopy[lang].actionNewDispute)
+  );
+  check(`grievance form trigger exists (${lang})`, !!openButton);
+  await act(async () => {
+    openButton?.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+  });
+  const text = host.textContent || '';
+  const html = host.innerHTML;
+  await act(async () => {
+    root.unmount();
+  });
+  host.remove();
+  return { text, html, beforeOpen };
+}
+
+const enForm = await openGrievanceForm('en');
+check('English form states it is a WURK UP internal record', enForm.text.includes(dashboardCopy.en.disputesDisclaimerTitle));
+check(
+  'English form explains nothing is forwarded to the District Labour Office',
+  enForm.text.includes('does not forward it to the District Labour Office')
+);
+check('English form offers the WURK UP reference label', enForm.text.includes('WURK UP submission reference'));
+check('English form never calls the reference a DLO filing', !/DLO reference/i.test(enForm.text));
+check('English history keeps the deployed column value readable', enForm.text.includes('DLO-IND-WAGE-2026/0419'));
+check('English history marks pre-correction values as legacy', enForm.text.includes('Legacy reference'));
+check(
+  'English panel shows the short notice before the form is opened',
+  enForm.beforeOpen.includes(dashboardCopy.en.disputesNotOfficial)
+);
+check(
+  'English full disclaimer text only appears once the form is open',
+  !enForm.beforeOpen.includes('does not forward it to the District Labour Office')
+);
+
+const hiForm = await openGrievanceForm('hi');
+check('Hindi form states it is a WURK UP internal record', hiForm.text.includes(dashboardCopy.hi.disputesDisclaimerTitle));
+check(
+  'Hindi form explains nothing is forwarded to the District Labour Office',
+  hiForm.text.includes('जिला श्रम पदाधिकारी')
+);
+check('Hindi form offers the WURK UP reference label', hiForm.text.includes('WURK UP जमा संदर्भ'));
+check('Hindi form keeps the reference label free of DLO', !hiForm.text.includes('DLO संदर्भ'));
+check('Hindi form shows the Hindi short notice', hiForm.text.includes(dashboardCopy.hi.disputesNotOfficial));
+check(
+  'Hindi panel shows the short notice before the form is opened',
+  hiForm.beforeOpen.includes(dashboardCopy.hi.disputesNotOfficial)
+);
+
+// A recorded reference must render as WURK UP, not as a government filing, in both roles.
+check(
+  'worker history labels the reference as WURK UP',
+  disputesHtml.includes('WURK UP submission reference')
+);
+check('worker history has no DLO filing label', !/DLO reference|DLO filing/i.test(disputesHtml));
+check(
+  'contractor history labels the reference as WURK UP',
+  contractorDisputesHtml.includes('WURK UP submission reference')
+);
+check('contractor history has no DLO filing label', !/DLO reference|DLO filing/i.test(contractorDisputesHtml));
+
+/* ------------------------------------------------------------------------- */
+/* 10. Judge-demo grievance experience (internal record, not a filing)        */
+/* ------------------------------------------------------------------------- */
+
+const demoWorker: Worker = {
+  id: 'WKR-DEMO-1',
+  name: 'Rameshwar Lal Ahirwar',
+  hindiName: 'रामेश्वर लाल अहिरवार',
+  phone: '+91 98260 14820',
+  trade: 'Head Mason (मुख्य राजमिस्त्री)',
+  skillLevel: 'skilled',
+  dailyBaseWage: 550,
+  eShramUAN: '123456789012',
+  bocwRegistrationNo: 'MP/BOCW/2026/001',
+  aadhaarLast4: '4321',
+  bloodGroup: 'B+',
+  emergencyContact: { name: 'Sunita Bai', phone: '+91 98260 00000', relation: 'Spouse' },
+  photoUrl: '',
+  joinedDate: '2026-01-01',
+  activeSiteId: 'SITE-IND-01',
+};
+
+const demoGrievance: DisputeGrievance = {
+  id: 'GRV-DEMO-1',
+  workerId: demoWorker.id,
+  workerName: demoWorker.name,
+  workerPhone: demoWorker.phone,
+  contractorName: 'Radhe Construction Services',
+  contractorPhone: '+91 94250 81920',
+  siteName: 'Super Corridor Ring Road Project',
+  disputeType: 'unpaid_wages',
+  claimedAmount: 4200,
+  incidentDate: '2026-10-28',
+  filingDate: '2026-11-04',
+  status: 'submitted',
+  description: 'Ten days of concrete batching work were recorded but never paid.',
+  dloFilingRef: 'WU-DSP-20261104-9M2XQ7KB4T',
+  evidenceMusterCount: 10,
+  isDemoRecord: true,
+};
+
+const createdGrievances: DisputeGrievance[] = [];
+
+async function renderDemoGrievance(lang: 'en' | 'hi') {
+  const host = w.document.createElement('div');
+  w.document.body.appendChild(host);
+  const root = createRoot(host);
+  await act(async () => {
+    root.render(
+      React.createElement(GrievanceRedressal, {
+        worker: demoWorker,
+        grievances: [demoGrievance],
+        onAddGrievance: (grievance: DisputeGrievance) => {
+          createdGrievances.push(grievance);
+        },
+        lang,
+      })
+    );
+  });
+  const text = host.textContent || '';
+  const form = host.querySelector('form');
+  await act(async () => {
+    form?.dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+  });
+  await act(async () => {
+    root.unmount();
+  });
+  host.remove();
+  return text;
+}
+
+const demoEn = await renderDemoGrievance('en');
+check('demo grievance history shows the WURK UP reference', demoEn.includes('WU-DSP-20261104-9M2XQ7KB4T'));
+check('demo record header is an internal WURK UP record', demoEn.includes('WURK UP GRIEVANCE RECORD (INTERNAL)'));
+check('demo record states it was not submitted anywhere', demoEn.includes('has not been submitted to the'));
+check('demo form shows the internal-record notice', demoEn.includes('WURK UP record only'));
+check('demo UI never claims a DLO petition', !/BEFORE THE DISTRICT LABOUR OFFICER/i.test(demoEn));
+check('demo UI never claims a statutory petition', !/PETITION UNDER SECTION 20/i.test(demoEn));
+check('demo UI never claims legal grounding', !/Valid Legal Grounding/i.test(demoEn));
+
+check('demo submission created a grievance', createdGrievances.length === 1, String(createdGrievances.length));
+check(
+  'demo submission reference is a WURK UP reference',
+  createdGrievances.every((row) => isSubmissionReference(row.dloFilingRef)),
+  createdGrievances.map((row) => row.dloFilingRef).join(',')
+);
+check(
+  'demo submission reference is not a DLO value',
+  createdGrievances.every((row) => !/^DLO-|^MP-DLO-/i.test(row.dloFilingRef))
+);
+
+const demoHi = await renderDemoGrievance('hi');
+check('demo Hindi record header is internal', demoHi.includes('WURK UP शिकायत रिकॉर्ड (आंतरिक)'));
+check('demo Hindi form notice is present', demoHi.includes('केवल WURK UP रिकॉर्ड'));
+check('demo Hindi UI never claims a DLO petition', !/जिला श्रम पदाधिकारी इंदौर कानूनी आवेदन पत्र/.test(demoHi));
+check(
+  'demo Hindi record keeps the internal-record disclaimer',
+  demoHi.includes('सरकारी प्राधिकरण में दायर नहीं')
+);
 
 /* ------------------------------------------------------------------------- */
 /* Report                                                                     */

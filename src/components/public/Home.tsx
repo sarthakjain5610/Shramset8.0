@@ -448,7 +448,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
                     ['Permanent QR pass', 'One reusable credential with zero private data.'],
                     ['Plain-language khata', 'Earned, advanced, due — explained line by line.'],
                     ['Approval control', 'A contractor cannot finalise a shift without you.'],
-                    ['Samadhan grievances', 'Structured statutory filing under MP BOCW norms.'],
+                    ['Samadhan grievances', 'A documented wage grievance with muster evidence attached.'],
                   ].map(([title, body]) => (
                     <li key={title} className="flex gap-3">
                       <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-forest-50 text-forest-700">

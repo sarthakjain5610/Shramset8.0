@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Gavel, MessageSquareQuote, ShieldAlert } from 'lucide-react';
 import type { ContractorViewProps } from '../types';
 import { dc } from '../dashboardCopy';
+import { isLegacyGovernmentStyleReference } from '../../../services/submissionReference';
 import { Surface, EmptyState, Pill, KpiCard, Field, SecondChanceNotice } from '../ui';
 import {
   formatPaise,
@@ -49,7 +50,15 @@ export const ContractorDisputes: React.FC<Pick<ContractorViewProps, 'lang' | 'wo
                       {pickLabel(DISPUTE_TYPE_LABELS[row.dispute_type], lang)}
                     </p>
                     <p className="mt-0.5 text-[11px] text-ink-500">
-                      {nameById.get(row.worker_id) || row.worker_id} · <span className="font-mono">{row.dlo_filing_ref}</span>
+                      {nameById.get(row.worker_id) || row.worker_id} ·{' '}
+                      <span className="font-bold uppercase tracking-[0.08em]">{dc(lang, 'disputesReference')}</span>
+                      {': '}
+                      <span className="font-mono">{row.dlo_filing_ref}</span>
+                      {isLegacyGovernmentStyleReference(row.dlo_filing_ref) && (
+                        <span className="ml-1.5 rounded bg-sand-200 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-ink-600">
+                          {dc(lang, 'disputesLegacyReference')}
+                        </span>
+                      )}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">

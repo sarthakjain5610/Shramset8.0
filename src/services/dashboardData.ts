@@ -21,6 +21,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import type { CloudWorkerDirectoryRecord, SkillLevel, WorkerPrivateDataRecord } from '../types';
+import { buildSubmissionReference, localIsoDate } from './submissionReference';
 import {
   completeMyWorkerOnboarding,
   getAssignedWorkerContact,
@@ -153,6 +154,11 @@ export interface CloudDisputeRow {
   description: string;
   contractor_response?: string | null;
   contractor_response_date?: string | null;
+  /**
+   * WURK UP submission reference (`WU-DSP-YYYYMMDD-XXXXXXXXXX`).
+   * The column keeps its legacy `dlo_filing_ref` name for schema compatibility;
+   * it is not a District Labour Office filing number.
+   */
   dlo_filing_ref: string;
   evidence_muster_count?: number | null;
 }
@@ -505,10 +511,6 @@ function randomSuffix(length = 6): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('').slice(0, length).toUpperCase();
 }
 
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 export function validateDisputeInput(input: NewDisputeInput): string[] {
   const problems: string[] = [];
   if (!input.workerId) problems.push('A worker record is required.');
@@ -517,7 +519,7 @@ export function validateDisputeInput(input: NewDisputeInput): string[] {
     problems.push('Claimed amount must be greater than zero.');
   }
   if (!input.incidentDate) problems.push('An incident date is required.');
-  else if (input.incidentDate > todayIso()) problems.push('The incident date cannot be in the future.');
+  else if (input.incidentDate > localIsoDate()) problems.push('The incident date cannot be in the future.');
   if (!input.description.trim() || input.description.trim().length < 20) {
     problems.push('Describe the dispute in at least 20 characters.');
   }
@@ -534,7 +536,7 @@ export async function fileWorkerDispute(input: NewDisputeInput): Promise<CloudDi
   const problems = validateDisputeInput(input);
   if (problems.length > 0) throw new DashboardError('validation', problems[0]);
 
-  const filingDate = todayIso();
+  const filingDate = localIsoDate();
   const payload = {
     id: `DSP-${randomSuffix(10)}`,
     worker_id: input.workerId,
@@ -547,7 +549,10 @@ export async function fileWorkerDispute(input: NewDisputeInput): Promise<CloudDi
     filing_date: filingDate,
     status: 'submitted' as DisputeStatus,
     description: input.description.trim(),
-    dlo_filing_ref: `DLO-${filingDate.replace(/-/g, '')}-${randomSuffix(6)}`,
+    // WURK UP internal reference. WURK UP does not file with the District Labour
+    // Office or any government authority; the storage column merely keeps its
+    // historical name so no migration or data rewrite is needed.
+    dlo_filing_ref: buildSubmissionReference(),
     evidence_muster_count: Math.max(0, Math.round(input.evidenceMusterCount)),
   };
 

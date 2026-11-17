@@ -18,6 +18,7 @@ import { Language, t, formatCurrency, getLocalizedTrade } from '../services/i18n
 import { speech } from '../services/speech';
 import { APP_CONFIG } from '../config';
 import { db } from '../services/db';
+import { buildSubmissionReference } from '../services/submissionReference';
 
 interface GrievanceRedressalProps {
   worker: Worker;
@@ -61,7 +62,9 @@ export const GrievanceRedressal: React.FC<GrievanceRedressalProps> = ({
 
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
-    const filingRef = `DLO-IND-WAGE-${now.getFullYear()}/${Math.floor(1000 + Math.random() * 9000)}`;
+    // WURK UP internal tracking reference. Nothing is filed with the District
+    // Labour Office or any government authority.
+    const filingRef = buildSubmissionReference(now);
 
     const newGrievance: DisputeGrievance = {
       id: `GRV-${Date.now()}`,
@@ -91,12 +94,12 @@ export const GrievanceRedressal: React.FC<GrievanceRedressalProps> = ({
 
     if (lang === 'hi') {
       speech.speak(
-        `आपकी शिकायत संदर्भ संख्या ${filingRef} के साथ दर्ज हो गई है। जिला श्रम पदाधिकारी इंदौर को भेजने हेतु आवेदन पत्र तैयार है। हेल्पलाइन 7909348017।`,
+        `आपकी शिकायत WURK UP में संदर्भ संख्या ${filingRef} के साथ दर्ज हो गई है। यह केवल WURK UP का आंतरिक रिकॉर्ड है, किसी सरकारी कार्यालय में दायर नहीं हुई। सहायता हेल्पलाइन 7909348017।`,
         'hi-IN'
       );
     } else {
       speech.speak(
-        `Wage grievance filed successfully under reference ${filingRef}. Legal representation generated for District Labor Officer, Indore. Helpline 7909348017.`,
+        `Grievance recorded in WURK UP under reference ${filingRef}. This is an internal WURK UP record and has not been filed with any government office. Support helpline 7909348017.`,
         'en-IN'
       );
     }
@@ -117,90 +120,111 @@ export const GrievanceRedressal: React.FC<GrievanceRedressalProps> = ({
     setShowResponseForm(false);
   };
 
-  const generateLegalPetitionText = (g: DisputeGrievance, currentLang: Language) => {
+  /**
+   * Builds the plain-text grievance record the worker can read, copy or print.
+   *
+   * It is deliberately framed as a WURK UP internal record: WURK UP does not file
+   * with the District Labour Office or any government authority, so the document
+   * must never read like a petition that has been (or will be) submitted for them.
+   */
+  const generateGrievanceRecordText = (g: DisputeGrievance, currentLang: Language) => {
     const tradeEn = getLocalizedTrade(worker.trade, 'en');
     const tradeHi = getLocalizedTrade(worker.trade, 'hi');
 
     if (currentLang === 'hi') {
-      return `सेवा में,
-श्रीमती / श्रीमान जिला श्रम पदाधिकारी (DLO),
-श्रम कल्याण संभाग, इंदौर, मध्य प्रदेश।
+      return `WURK UP शिकायत रिकॉर्ड (आंतरिक)
 
-विषय: न्यूनतम मजदूरी अधिनियम 1948 (धारा 20) एवं वेतन संदाय अधिनियम 1936 अंतर्गत बकाया मजदूरी वसूली बाबत औपचारिक आवेदन।
+जमा संदर्भ संख्या: ${g.dloFilingRef}
+दर्ज दिनांक: ${g.filingDate}
 
-संदर्भ आवेदन संख्या: ${g.dloFilingRef}
-दिनांक: ${g.filingDate}
+सूचना: यह केवल WURK UP का आंतरिक रिकॉर्ड है। इसे जिला श्रम पदाधिकारी, श्रम न्यायालय या
+किसी अन्य सरकारी प्राधिकरण में दायर नहीं किया गया है और इससे कोई आधिकारिक शिकायत या
+सांविधिक प्रकरण शुरू नहीं होता। कोई भी औपचारिक दावा श्रमिक को स्वयं संबंधित प्राधिकरण में
+दायर करना होगा; WURK UP उस दायर की प्रक्रिया का पक्षकार नहीं है।
 
-महोदय,
-सविनय निवेदन है कि प्रार्थी ${worker.hindiName} (ई-श्रम UAN: ${worker.eShramUAN}, म.प्र. बीओसीडब्ल्यू पंजीयन: ${worker.bocwRegistrationNo}), पेशा: ${tradeHi}, मोबाइल: ${g.workerPhone} द्वारा निम्न विवरण प्रस्तुत किया जा रहा है:
+आवेदक श्रमिक
+नाम: ${worker.hindiName}
+ई-श्रम UAN: ${worker.eShramUAN}
+म.प्र. BOCW पंजीयन: ${worker.bocwRegistrationNo}
+पेशा: ${tradeHi}
+मोबाइल: ${g.workerPhone}
 
+दर्ज विवरण
 1. कार्य स्थल: ${g.siteName}
 2. अनावेदक ठेकेदार: ${g.contractorName} (मोबाइल: ${g.contractorPhone})
-3. विवाद का प्रकार: ${
+3. शिकायत का प्रकार: ${
         g.disputeType === 'unpaid_wages'
-          ? 'अर्जित मजदूरी का अनाधिकृत रूप से रोका जाना'
+          ? 'अर्जित मजदूरी का भुगतान न किया जाना'
           : g.disputeType === 'arbitrary_deduction'
-          ? 'मजदूरी में से अवैध व मनमानी कटौती'
+          ? 'मजदूरी में से कटौती'
           : 'ओवरटाइम कार्य का भुगतान न किया जाना'
       }
-4. कुल बकाया दावा राशि: ₹${g.claimedAmount} (रुपये ${g.claimedAmount} मात्र)
-5. संलग्न साक्ष्य: WurkUp डिजिटल मस्टर रोल के ${g.evidenceMusterCount} सत्यापित कार्य दिवस।
+4. कुल दावा राशि: ₹${g.claimedAmount} (रुपये ${g.claimedAmount} मात्र)
+5. सहायक साक्ष्य: WURK UP पर दर्ज ${g.evidenceMusterCount} सत्यापित मस्टर रोल प्रविष्टियाँ।
 
-श्रमिक का अभिकथन:
+श्रमिक का कथन:
 "${g.description}"
 
-${g.contractorResponse ? `अनावेदक ठेकेदार का प्रतिउत्तर (दिनांक ${g.contractorResponseDate || g.filingDate}):\n"${g.contractorResponse}"\n` : 'ठेकेदार का प्रतिउत्तर: लंबित (नोटिस जारी होने की प्रक्रिया में)\n'}
-अतः महोदय से विनम्र प्रार्थना है कि अनावेदक ठेकेदार को नोटिस जारी कर प्रार्थी की बकाया मजदूरी ₹${g.claimedAmount} मय सांविधिक क्षतिपूर्ति तत्काल दिलाई जाने की कृपा करें।
+${g.contractorResponse ? `ठेकेदार का कथन (दिनांक ${g.contractorResponseDate || g.filingDate}):
+"${g.contractorResponse}"
+` : 'ठेकेदार का कथन: अभी दर्ज नहीं\n'}
+अपेक्षित समाधान (श्रमिक द्वारा दर्ज):
+ठेकेदार द्वारा बकाया ₹${g.claimedAmount} का भुगतान। WURK UP यह अनुरोध केवल श्रमिक के अपने
+ट्रैकिंग हेतु दर्ज करता है; यह दावे पर निर्णय नहीं देता और श्रमिक की ओर से कोई नोटिस जारी नहीं करता।
 
-हस्ताक्षर / अंगूठा निशान:
-${worker.hindiName} (प्रार्थी श्रमिक)
-सत्यापित डिजिटल प्रतिलिपि - WurkUp (वरिष्ठ बाल विज्ञान नवाचार, इंदौर)
-आधिकारिक सहायता हेल्पलाइन: ${APP_CONFIG.CONTACT_PHONE}`;
+यह रिकॉर्ड WURK UP द्वारा तैयार किया गया — वरिष्ठ बाल विज्ञान नवाचार, इंदौर (म.प्र.)
+सहायता संपर्क: ${APP_CONFIG.CONTACT_PHONE}`;
     }
 
-    return `BEFORE THE DISTRICT LABOUR OFFICER (DLO),
-LABOUR WELFARE DIVISION, INDORE, MADHYA PRADESH.
+    return `WURK UP GRIEVANCE RECORD (INTERNAL)
 
-SUBJECT: PETITION UNDER SECTION 20 OF MINIMUM WAGES ACT 1948 & PAYMENT OF WAGES ACT 1936 FOR RECOVERY OF UNPAID STATUTORY WAGES.
+Submission Reference: ${g.dloFilingRef}
+Date Recorded: ${g.filingDate}
 
-Filing Reference No: ${g.dloFilingRef}
-Date of Filing: ${g.filingDate}
+NOTICE: This is an internal WURK UP record only. It has not been submitted to the
+District Labour Officer, a labour court, or any other government authority, and it does
+not start an official complaint or any statutory proceeding. Any formal claim must be
+filed by the worker directly with the appropriate authority; WURK UP is not a party to
+that filing.
 
-To,
-The District Labour Officer,
-Indore Division, Madhya Pradesh.
+APPLICANT WORKER
+Name: ${worker.name}
+e-Shram UAN: ${worker.eShramUAN}
+MP BOCW Reg: ${worker.bocwRegistrationNo}
+Trade: ${tradeEn}
+Mobile: ${g.workerPhone}
 
-Respected Officer,
-The applicant ${worker.name} (e-Shram UAN: ${worker.eShramUAN}, MP BOCW Reg: ${worker.bocwRegistrationNo}), Trade: ${tradeEn}, Mobile: ${g.workerPhone}, respectfully states as follows:
-
+RECORDED DETAILS
 1. Construction Project Site: ${g.siteName}
 2. Respondent Contractor: ${g.contractorName} (Contact: ${g.contractorPhone})
-3. Classification of Dispute: ${
+3. Classification of Grievance: ${
       g.disputeType === 'unpaid_wages'
-        ? 'Unlawful Non-payment of Earned Statutory Daily Wages'
+        ? 'Non-payment of earned daily wages'
         : g.disputeType === 'arbitrary_deduction'
-        ? 'Arbitrary and Illegal Wage Deduction'
-        : 'Denial of Statutory Overtime Compensation'
+        ? 'Deduction from earned wages'
+        : 'Non-payment for overtime hours worked'
     }
-4. Total Claimed Unpaid Amount: ₹${g.claimedAmount} (Rupees ${g.claimedAmount} only)
-5. Primary Evidentiary Records: ${g.evidenceMusterCount} verified muster roll records certified on WurkUp.
+4. Total Claimed Amount: ₹${g.claimedAmount} (Rupees ${g.claimedAmount} only)
+5. Supporting Evidence: ${g.evidenceMusterCount} verified muster roll records on WURK UP.
 
-Worker's Statement of Claim:
+Worker's Statement:
 "${g.description}"
 
-${g.contractorResponse ? `Respondent Contractor's Statement (Dated ${g.contractorResponseDate || g.filingDate}):\n"${g.contractorResponse}"\n` : "Contractor's Statement: Pending statutory inquiry response\n"}
-Prayer:
-It is respectfully prayed that this Authority issue urgent statutory notice to the respondent contractor and direct immediate payment of the outstanding amount of ₹${g.claimedAmount} along with statutory compensation under Section 20(3) of the Minimum Wages Act 1948.
+${g.contractorResponse ? `Contractor's Statement (Dated ${g.contractorResponseDate || g.filingDate}):
+"${g.contractorResponse}"
+` : "Contractor's Statement: not recorded yet\n"}
+Requested Outcome (recorded by the worker):
+Payment of the outstanding ₹${g.claimedAmount} by the contractor. WURK UP records this request
+for the worker's own tracking; it does not adjudicate the claim, issue notices, or act as the
+worker's representative before any authority.
 
-Signature of Applicant Worker:
-${worker.name}
-Verified Digital Copy — WurkUp Civic Labor Platform (Indore, MP)
-Official Support Helpline: ${APP_CONFIG.CONTACT_PHONE}`;
+Record generated by WURK UP — Senior Bal Vigyan Innovation, Indore (MP)
+Support contact: ${APP_CONFIG.CONTACT_PHONE}`;
   };
 
   const handleCopyNotice = () => {
     if (!selectedGrievanceForNotice) return;
-    const text = generateLegalPetitionText(selectedGrievanceForNotice, lang);
+    const text = generateGrievanceRecordText(selectedGrievanceForNotice, lang);
     navigator.clipboard.writeText(text);
     setCopiedNotice(true);
     setTimeout(() => setCopiedNotice(false), 3000);
@@ -215,12 +239,12 @@ Official Support Helpline: ${APP_CONFIG.CONTACT_PHONE}`;
     if (!selectedGrievanceForNotice) return;
     if (lang === 'hi') {
       speech.speak(
-        `आवेदन पत्र: जिला श्रम पदाधिकारी इंदौर को प्रेषित। दावा राशि ₹${selectedGrievanceForNotice.claimedAmount}। अनावेदक ठेकेदार: ${selectedGrievanceForNotice.contractorName}। डिजिटल मस्टर साक्ष्य संलग्न है। हेल्पलाइन 7909348017।`,
+        `WURK UP शिकायत रिकॉर्ड। दावा राशि ₹${selectedGrievanceForNotice.claimedAmount}। अनावेदक ठेकेदार: ${selectedGrievanceForNotice.contractorName}। यह आंतरिक रिकॉर्ड है, सरकारी कार्यालय में दायर नहीं। सहायता हेल्पलाइन 7909348017।`,
         'hi-IN'
       );
     } else {
       speech.speak(
-        `Legal petition for District Labor Officer, Indore. Claimed unpaid wages: ₹${selectedGrievanceForNotice.claimedAmount} against contractor ${selectedGrievanceForNotice.contractorName}. Helpline 7909348017.`,
+        `WURK UP grievance record. Claimed unpaid wages: ₹${selectedGrievanceForNotice.claimedAmount} against contractor ${selectedGrievanceForNotice.contractorName}. This is an internal record and has not been filed with a government office. Support helpline 7909348017.`,
         'en-IN'
       );
     }
@@ -253,7 +277,7 @@ Official Support Helpline: ${APP_CONFIG.CONTACT_PHONE}`;
         </div>
       </div>
 
-      {/* Grid: Filing Form (Left 5 cols) + Legal Petition & Active Cases (Right 7 cols) */}
+      {/* Grid: grievance form (left) + recorded cases and their internal record (right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start min-w-0">
         
         {/* Form to File New Grievance */}
@@ -266,6 +290,15 @@ Official Support Helpline: ${APP_CONFIG.CONTACT_PHONE}`;
             <span className="text-[11px] text-ink-500">
               {t('grievanceFormSubtitle', lang)}
             </span>
+          </div>
+
+          <div className="rounded-lg border border-brass-300 bg-brass-50 p-3 text-[11px] leading-relaxed text-brass-950">
+            <strong className="font-bold">
+              {lang === 'hi' ? 'केवल WURK UP रिकॉर्ड' : 'WURK UP record only'}:
+            </strong>{' '}
+            {lang === 'hi'
+              ? 'यह शिकायत WURK UP में दर्ज होती है और कुछ नहीं। यह जिला श्रम पदाधिकारी या किसी सरकारी प्राधिकरण में दायर नहीं होती, और कोई आधिकारिक शिकायत शुरू नहीं होती।'
+              : 'This records the grievance in WURK UP and nothing more. It is not filed with the District Labour Office or any government authority, and no official complaint is started.'}
           </div>
 
           <form onSubmit={handleSubmitDispute} className="space-y-3.5 text-xs">
@@ -428,7 +461,7 @@ Official Support Helpline: ${APP_CONFIG.CONTACT_PHONE}`;
             </div>
           </div>
 
-          {/* Formatted Legal Petition Display (DLO Indore Document) */}
+          {/* WURK UP internal grievance record (read-only text, copyable and printable) */}
           {selectedGrievanceForNotice && (
             <div className="bg-ink-900 text-sand-100 p-4 sm:p-5 rounded-2xl border border-ink-800 shadow-lg space-y-3 font-mono text-xs min-w-0">
               
@@ -511,11 +544,11 @@ Official Support Helpline: ${APP_CONFIG.CONTACT_PHONE}`;
 
               {/* Scrollable Document Body in clean language */}
               <pre className="whitespace-pre-wrap font-sans text-ink-300 text-[11px] leading-relaxed max-h-80 overflow-y-auto bg-ink-950 p-4 rounded-xl border border-ink-800 break-words w-full">
-                {generateLegalPetitionText(selectedGrievanceForNotice, lang)}
+                {generateGrievanceRecordText(selectedGrievanceForNotice, lang)}
               </pre>
 
               <div className="flex items-center justify-between text-[10px] text-ink-400 pt-1 font-sans">
-                <span>{lang === 'hi' ? 'प्रारूप: जिला श्रम पदाधिकारी इंदौर संभाग' : 'Format: District Labour Officer, Indore Division'}</span>
+                <span>{lang === 'hi' ? 'प्रारूप: WURK UP आंतरिक शिकायत रिकॉर्ड' : 'Format: WURK UP internal grievance record'}</span>
                 <span className="text-forest-400 font-bold">{t('grievanceLegalGrounding', lang)}</span>
               </div>
 

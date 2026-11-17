@@ -135,20 +135,26 @@ const en = {
     'Your decision is written only to status and responded_at, as permitted by the row-level security policy.',
 
   disputesHeading: 'Dispute petitions',
-  disputesSub: 'Filings you can raise against a contractor, with the muster evidence count attached.',
+  disputesSub:
+    'Grievances recorded inside WURK UP against a contractor, with your muster evidence count attached. These are internal records, not government filings.',
   disputesEmpty: 'No dispute petitions filed from this account.',
   disputesContractor: 'Contractor',
   disputesSite: 'Site',
   disputesClaimed: 'Claimed',
   disputesIncident: 'Incident date',
   disputesFiled: 'Filed',
-  disputesReference: 'DLO reference',
+  disputesReference: 'WURK UP submission reference',
+  disputesDisclaimerTitle: 'WURK UP internal record only',
+  disputesDisclaimerBody:
+    'Submitting this grievance records it inside WURK UP and nothing more. WURK UP does not forward it to the District Labour Office, a labour court or any other government authority, and no official complaint or statutory case is started. Keep your WURK UP reference for your own records; any formal claim must be filed by you directly with the appropriate authority.',
+  disputesNotOfficial: 'Not a District Labour Office or government filing.',
+  disputesLegacyReference: 'Legacy reference',
   disputesEvidence: 'Muster evidence',
   disputesResponse: 'Contractor response',
   disputesNoResponse: 'No contractor response recorded yet.',
-  disputesFormTitle: 'File a new dispute',
+  disputesFormTitle: 'Record a new grievance',
   disputesFormSub:
-    'Only disputes raised by you, for your own worker record, are accepted by the database policy.',
+    'Only grievances raised by you for your own worker record are accepted. This creates a WURK UP record — it does not file anything with a government authority.',
   disputesType: 'Dispute type',
   disputesAmountLabel: 'Claimed amount (₹)',
   disputesDescription: 'Your statement',
@@ -157,7 +163,7 @@ const en = {
   disputesContractorLabel: 'Contractor name',
   disputesContractorPhone: 'Contractor phone',
   disputesSiteLabel: 'Site name',
-  disputesSubmitted: 'Dispute filed with reference',
+  disputesSubmitted: 'Grievance recorded in WURK UP',
   disputesAgeing: 'Open days',
 
   profileHeading: 'Worker profile',
@@ -236,7 +242,8 @@ const en = {
     'Requests are created as pending only. Only the worker can approve, reject or flag them, and only while pending.',
 
   contractorDisputesHeading: 'Disputes in your crew',
-  contractorDisputesSub: 'Filings raised by workers on your roster. Read-only in this dashboard.',
+  contractorDisputesSub:
+    'Grievances recorded in WURK UP by workers on your roster. Read-only in this dashboard.',
   contractorDisputesEmpty: 'No disputes raised by the crew.',
   contractorDisputesResponseNote:
     'Contractor responses are not writable from the browser — the deployed policy grants INSERT to workers only. Nothing is simulated here.',
@@ -395,19 +402,26 @@ const hi: Record<DashboardKey, string> = {
     'आपका निर्णय केवल status और responded_at में लिखा जाता है, जैसा रो-लेवल सुरक्षा नीति अनुमति देती है।',
 
   disputesHeading: 'विवाद याचिकाएँ',
-  disputesSub: 'ठेकेदार के विरुद्ध दर्ज याचिकाएँ, मस्टर साक्ष्य संख्या के साथ।',
+  disputesSub:
+    'ठेकेदार के विरुद्ध WURK UP के भीतर दर्ज शिकायतें, आपके मस्टर साक्ष्य की संख्या के साथ। ये आंतरिक रिकॉर्ड हैं, सरकारी फाइलिंग नहीं।',
   disputesEmpty: 'इस खाते से कोई विवाद दर्ज नहीं।',
   disputesContractor: 'ठेकेदार',
   disputesSite: 'साइट',
   disputesClaimed: 'दावा',
   disputesIncident: 'घटना तिथि',
   disputesFiled: 'दर्ज',
-  disputesReference: 'DLO संदर्भ',
+  disputesReference: 'WURK UP जमा संदर्भ',
+  disputesDisclaimerTitle: 'केवल WURK UP आंतरिक रिकॉर्ड',
+  disputesDisclaimerBody:
+    'यह शिकायत दर्ज करने से यह केवल WURK UP के भीतर दर्ज होती है, और कुछ नहीं। WURK UP इसे जिला श्रम पदाधिकारी, श्रम न्यायालय या किसी अन्य सरकारी प्राधिकरण को नहीं भेजता, और न ही कोई आधिकारिक शिकायत या सांविधिक प्रकरण शुरू होता है। अपना WURK UP संदर्भ अपने रिकॉर्ड के लिए सुरक्षित रखें; कोई भी औपचारिक दावा आपको स्वयं संबंधित प्राधिकरण में दायर करना होगा।',
+  disputesNotOfficial: 'जिला श्रम पदाधिकारी या सरकारी फाइलिंग नहीं।',
+  disputesLegacyReference: 'पुराना संदर्भ',
   disputesEvidence: 'मस्टर साक्ष्य',
   disputesResponse: 'ठेकेदार उत्तर',
   disputesNoResponse: 'अभी कोई ठेकेदार उत्तर दर्ज नहीं।',
-  disputesFormTitle: 'नया विवाद दर्ज करें',
-  disputesFormSub: 'डेटाबेस नीति केवल आपके अपने श्रमिक रिकॉर्ड हेतु आपके द्वारा दर्ज विवाद स्वीकारती है।',
+  disputesFormTitle: 'नई शिकायत दर्ज करें',
+  disputesFormSub:
+    'डेटाबेस नीति केवल आपके अपने श्रमिक रिकॉर्ड हेतु आपके द्वारा दर्ज शिकायतें स्वीकारती है। यह WURK UP रिकॉर्ड बनाता है — किसी सरकारी प्राधिकरण में कुछ दायर नहीं होता।',
   disputesType: 'विवाद प्रकार',
   disputesAmountLabel: 'दावा राशि (₹)',
   disputesDescription: 'आपका कथन',
@@ -416,7 +430,7 @@ const hi: Record<DashboardKey, string> = {
   disputesContractorLabel: 'ठेकेदार का नाम',
   disputesContractorPhone: 'ठेकेदार फ़ोन',
   disputesSiteLabel: 'साइट का नाम',
-  disputesSubmitted: 'विवाद संदर्भ के साथ दर्ज हुआ',
+  disputesSubmitted: 'शिकायत WURK UP में दर्ज हुई',
   disputesAgeing: 'खुले दिन',
 
   profileHeading: 'श्रमिक प्रोफ़ाइल',
@@ -495,7 +509,8 @@ const hi: Record<DashboardKey, string> = {
     'अनुरोध केवल लंबित के रूप में बनते हैं। केवल श्रमिक ही स्वीकृत, अस्वीकार या संदिग्ध बता सकता है, और केवल लंबित रहने तक।',
 
   contractorDisputesHeading: 'आपकी टीम के विवाद',
-  contractorDisputesSub: 'आपकी सूची के श्रमिकों द्वारा दर्ज याचिकाएँ। इस डैशबोर्ड में केवल पढ़ने योग्य।',
+  contractorDisputesSub:
+    'आपकी सूची के श्रमिकों द्वारा WURK UP में दर्ज शिकायतें। इस डैशबोर्ड में केवल पढ़ने योग्य।',
   contractorDisputesEmpty: 'टीम द्वारा कोई विवाद दर्ज नहीं।',
   contractorDisputesResponseNote:
     'ब्राउज़र से ठेकेदार उत्तर लिखना संभव नहीं — लागू नीति केवल श्रमिक को INSERT देती है। यहाँ कुछ भी नकली नहीं दिखाया जाता।',

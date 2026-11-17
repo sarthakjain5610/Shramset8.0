@@ -40,8 +40,8 @@ const QUICK_HELP = [
       <>
         Do not sign anything. Call the helpline and note the date, site name and supervisor. If your
         contractor is on WurkUp, an approval request will appear on your account — approving it is
-        what creates the record. If they are not, we log the complaint in the same format used for
-        statutory filings.
+        what creates the record. If they are not, we record the grievance in WurkUp so you have a
+        dated, documented trail. That record is not a filing with any government office.
       </>
     ),
   },

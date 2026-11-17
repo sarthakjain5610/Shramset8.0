@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, FileText, Gavel, LoaderCircle, Plus } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, FileText, Gavel, LoaderCircle, Plus, ShieldAlert } from 'lucide-react';
 import type { WorkerViewProps } from '../types';
 import { dc } from '../dashboardCopy';
 import {
@@ -7,11 +7,12 @@ import {
   EmptyState,
   Pill,
   ErrorNotice,
-  SuccessNotice,
   DashboardButton,
   KpiCard,
   Field,
+  SecondChanceNotice,
 } from '../ui';
+import { isLegacyGovernmentStyleReference } from '../../../services/submissionReference';
 import {
   fileWorkerDispute,
   validateDisputeInput,
@@ -118,7 +119,26 @@ export const WorkerDisputes: React.FC<Props> = ({ lang, disputes, attendance, wo
   return (
     <div className="space-y-4">
       {error && <ErrorNotice title={dc(lang, 'commonErrorTitle')} message={error} />}
-      {filedRef && <SuccessNotice message={`${dc(lang, 'disputesSubmitted')} ${filedRef}`} />}
+      {filedRef && (
+        <div role="status" className="rounded-xl border border-forest-200 bg-forest-50 p-4">
+          <p className="flex items-start gap-2 text-sm font-bold text-forest-900">
+            <CheckCircle2 size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
+            {dc(lang, 'disputesSubmitted')}
+          </p>
+          <p className="mt-1.5 pl-6 text-[12px] text-forest-900">
+            <span className="font-bold uppercase tracking-wide">{dc(lang, 'disputesReference')}</span>
+            {': '}
+            <span className="font-mono font-bold">{filedRef}</span>
+          </p>
+          <p className="mt-1 pl-6 text-[11px] leading-relaxed text-forest-800">{dc(lang, 'disputesNotOfficial')}</p>
+        </div>
+      )}
+
+      <SecondChanceNotice
+        title={dc(lang, 'disputesDisclaimerTitle')}
+        message={dc(lang, 'disputesNotOfficial')}
+        icon={<ShieldAlert size={18} />}
+      />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label={dc(lang, 'disputesHeading')} value={summary.total} icon={<FileText size={16} />} />
@@ -148,6 +168,14 @@ export const WorkerDisputes: React.FC<Props> = ({ lang, disputes, attendance, wo
           <form onSubmit={submit} className="mb-5 rounded-xl border border-sand-200 bg-sand-50/60 p-4">
             <p className="text-sm font-extrabold text-ink-950">{dc(lang, 'disputesFormTitle')}</p>
             <p className="mt-1 text-xs leading-relaxed text-ink-500">{dc(lang, 'disputesFormSub')}</p>
+
+            <div className="mt-3">
+              <SecondChanceNotice
+                title={dc(lang, 'disputesDisclaimerTitle')}
+                message={dc(lang, 'disputesDisclaimerBody')}
+                icon={<ShieldAlert size={18} />}
+              />
+            </div>
 
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <label className="block text-xs font-bold uppercase tracking-wide text-ink-600">
@@ -268,7 +296,16 @@ export const WorkerDisputes: React.FC<Props> = ({ lang, disputes, attendance, wo
                     <p className="text-[13px] font-extrabold text-ink-950">
                       {pickLabel(DISPUTE_TYPE_LABELS[row.dispute_type], lang)}
                     </p>
-                    <p className="mt-0.5 font-mono text-[11px] text-ink-500">{row.dlo_filing_ref}</p>
+                    <p className="mt-0.5 text-[11px] text-ink-500">
+                      <span className="font-bold uppercase tracking-[0.08em]">{dc(lang, 'disputesReference')}</span>
+                      {': '}
+                      <span className="font-mono font-semibold">{row.dlo_filing_ref}</span>
+                      {isLegacyGovernmentStyleReference(row.dlo_filing_ref) && (
+                        <span className="ml-2 rounded bg-sand-200 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-ink-600">
+                          {dc(lang, 'disputesLegacyReference')}
+                        </span>
+                      )}
+                    </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     {row.status !== 'settled' && (
