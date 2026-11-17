@@ -5,18 +5,38 @@ without touching either branch, combine them in a **temporary local worktree** t
 is never pushed. Nothing in this procedure creates a commit on, or pushes to,
 `arena/2b71e6b4-shramset8-0` (PR #11) or `arena/ec593218-shramset8-0` (PR #12).
 
-Verified: the procedure below was executed end to end on 2026-11-11 in a detached
-worktree at `origin/main` + PR #11 + PR #12. Results:
+## Verification status
+
+The procedure was executed end to end in a temporary detached worktree on
+**2026-11-17 (UTC)** — the day PR #12 was opened. Recorded evidence:
+
+| Item | Value |
+| --- | --- |
+| Worktree base | `origin/main` = `d85ac8d` (`Merge pull request #10`) |
+| PR #11 merged in | `f69ccc5` — *Add safe auth stage diagnostics* (unchanged since 2026-11-08) |
+| PR #12 merged in | `231fa4f` — *Require Web Crypto for grievance references…* |
+| Merge commits created | 2026-11-17T15:38Z (`git log --format=%cI` in the worktree) |
+| Suite finished | 2026-11-17T15:38:51Z |
+| PR #12 opened | 2026-11-17T14:35Z (`gh pr view 12 --json createdAt`) |
+
+Commands run in the merged worktree, with the resulting output:
 
 ```
-tsc --noEmit .................... clean
-run-all-tests ................... 60 / 60 passed
-auth-registration-test .......... 21 / 21 passed
-dashboard-test .................. 176 / 176 checks passed
-smoke-render .................... 16 / 16 screens rendered cleanly
-flow-test ....................... 29 / 29 steps passed
-vite build ...................... succeeded
+npx tsc --noEmit ................ clean
+scripts/run-all-tests.ts ........ TEST RUN COMPLETED: 60 / 60 TESTS PASSED
+scripts/auth-registration-test.ts  AUTH REGISTRATION TESTS: 21/21 passed
+scripts/dashboard-test.tsx ...... DASHBOARD SUITE COMPLETED: 189 / 189 CHECKS PASSED
+scripts/smoke-render.ts ......... 16/16 screens rendered cleanly.
+scripts/flow-test.ts ............ 29/29 steps passed.
+npm run build .................... built in 846ms
 ```
+
+The worktree was deleted immediately afterwards (`git worktree remove --force`,
+`git worktree prune`) and there is no local integration branch, so nothing from this
+run can be pushed. The counts above are for the merged tree of `d85ac8d` + `f69ccc5`
++ `231fa4f`; re-running the procedure reproduces them. A worker here has not yet been
+tried against a live `VITE_SUPABASE_*` configuration or real accounts — that is the
+step the team performs locally with the project's own `.env.local`.
 
 Only two files conflict — `package.json` and `scripts/smoke-render.ts` — because each
 PR added its own test command and its own screen-render assertions. Both sides must
