@@ -100,6 +100,67 @@ try {
       results.push({ name, ok: false, error: error?.message ?? String(error) });
     }
   }
+  // Authenticated dashboards. These cannot reach Supabase during a headless run,
+  // so the assertion is that the shell + section rail render for both roles and
+  // both languages — and that the unconfigured state is explicit, not blank.
+  const { WorkerDashboard } = await import('../src/components/dashboard/worker/WorkerDashboard');
+  const { ContractorDashboard } = await import('../src/components/dashboard/contractor/ContractorDashboard');
+
+  const dashboardUser = {
+    id: '00000000-0000-4000-8000-000000000002',
+    email: 'dash@example.com',
+    phone: '+91 98260 00000',
+    fullName: 'Sunita Bai Verma',
+    role: 'worker' as const,
+    contactVerificationStatus: 'number_supplied' as const,
+    manualChecks: [],
+    consentToShareContact: false,
+    privacyAccepted: true,
+    qrReferenceToken: 'token',
+    createdAt: '2026-10-01T00:00:00Z',
+  };
+
+  const dashboards: [string, React.ComponentType<any>, Record<string, unknown>, string[]][] = [
+    [
+      'WorkerDashboard (en)',
+      WorkerDashboard,
+      { user: dashboardUser, lang: 'en' },
+      ['Worker workspace', 'Overview', 'Attendance', 'Wages', 'Approvals', 'Disputes', 'Profile', 'Refresh'],
+    ],
+    [
+      'WorkerDashboard (hi)',
+      WorkerDashboard,
+      { user: dashboardUser, lang: 'hi' },
+      ['श्रमिक कार्यक्षेत्र', 'सारांश', 'उपस्थिति', 'मजदूरी'],
+    ],
+    [
+      'ContractorDashboard (en)',
+      ContractorDashboard,
+      {
+        user: { ...dashboardUser, role: 'contractor', organizationName: 'Narmada Infra' },
+        lang: 'en',
+      },
+      ['Contractor workspace', 'Crew', 'Sites', 'Attendance', 'Wages', 'Approvals', 'Disputes'],
+    ],
+    [
+      'ContractorDashboard (hi)',
+      ContractorDashboard,
+      {
+        user: { ...dashboardUser, role: 'contractor', organizationName: 'Narmada Infra' },
+        lang: 'hi',
+      },
+      ['ठेकेदार कार्यक्षेत्र', 'टीम', 'साइट'],
+    ],
+  ];
+
+  for (const [name, Component, props, needles] of dashboards) {
+    try {
+      const html = renderToString(React.createElement(Component, props));
+      check(name, html, needles);
+    } catch (error: any) {
+      results.push({ name, ok: false, error: error?.message ?? String(error) });
+    }
+  }
 } catch (error: any) {
   results.push({ name: 'App shell', ok: false, error: error?.message ?? String(error) });
 }

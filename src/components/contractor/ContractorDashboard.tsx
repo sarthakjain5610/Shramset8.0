@@ -33,7 +33,7 @@ import { evaluateAnomalies } from '../../services/anomalyEngine';
 import { calculateRecordBreakdown } from '../../services/wageEngine';
 import { ContactVerificationModal } from '../ContactVerificationModal';
 import jsQR from 'jsqr';
-import { ContractorCloudWorkspace } from './ContractorCloudWorkspace';
+import { ContractorDashboard as CloudContractorDashboard } from '../dashboard/contractor/ContractorDashboard';
 
 interface ContractorDashboardProps {
   user: UserProfile;
@@ -1411,4 +1411,4 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
 /** Keep synthetic IndexedDB workflows isolated from real authenticated contractors. */
 export const ContractorDashboard: React.FC<ContractorDashboardProps> = (props) => props.user.isJudgeDemo
   ? <DemoContractorDashboard {...props} />
-  : <ContractorCloudWorkspace user={props.user} />;
+  : <CloudContractorDashboard user={props.user} lang={props.lang} />;

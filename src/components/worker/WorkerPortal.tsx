@@ -30,7 +30,7 @@ import { QRCodeDisplay } from '../QRCodeDisplay';
 import { WorkerCard } from '../WorkerCard';
 import { ContactVerificationModal } from '../ContactVerificationModal';
 import { buildVerifyUrl } from '../../services/verifyLink';
-import { WorkerCloudWorkspace } from './WorkerCloudWorkspace';
+import { WorkerDashboard } from '../dashboard/worker/WorkerDashboard';
 
 interface WorkerPortalProps {
   user: UserProfile;
@@ -989,4 +989,4 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
 /** Real accounts use the RLS/RPC-backed workspace; synthetic records remain demo-only. */
 export const WorkerPortal: React.FC<WorkerPortalProps> = (props) => props.user.isJudgeDemo
   ? <DemoWorkerPortal {...props} />
-  : <WorkerCloudWorkspace user={props.user} />;
+  : <WorkerDashboard user={props.user} lang={props.lang} />;
