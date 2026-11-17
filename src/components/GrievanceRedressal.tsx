@@ -43,6 +43,7 @@ export const GrievanceRedressal: React.FC<GrievanceRedressalProps> = ({
     grievances[0] || null
   );
   const [copiedNotice, setCopiedNotice] = useState(false);
+  const [referenceError, setReferenceError] = useState<string | null>(null);
 
   // Contractor response state
   const [contractorRebuttalText, setContractorRebuttalText] = useState('');
@@ -63,8 +64,20 @@ export const GrievanceRedressal: React.FC<GrievanceRedressalProps> = ({
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
     // WURK UP internal tracking reference. Nothing is filed with the District
-    // Labour Office or any government authority.
-    const filingRef = buildSubmissionReference(now);
+    // Labour Office or any government authority. Generated only from Web Crypto:
+    // if that is unavailable nothing is recorded rather than a guessable id.
+    let filingRef: string;
+    try {
+      filingRef = buildSubmissionReference(now);
+    } catch {
+      setReferenceError(
+        lang === 'hi'
+          ? 'इस ब्राउज़र में सुरक्षित संदर्भ संख्या नहीं बन सकी, इसलिए कुछ भी दर्ज नहीं हुआ। कृपया अद्यतित ब्राउज़र में WURK UP खोलकर पुनः प्रयास करें।'
+          : 'A secure reference could not be created in this browser, so nothing was recorded. Open WURK UP in a current browser and try again.'
+      );
+      return;
+    }
+    setReferenceError(null);
 
     const newGrievance: DisputeGrievance = {
       id: `GRV-${Date.now()}`,
@@ -300,6 +313,12 @@ Support contact: ${APP_CONFIG.CONTACT_PHONE}`;
               ? 'यह शिकायत WURK UP में दर्ज होती है और कुछ नहीं। यह जिला श्रम पदाधिकारी या किसी सरकारी प्राधिकरण में दायर नहीं होती, और कोई आधिकारिक शिकायत शुरू नहीं होती।'
               : 'This records the grievance in WURK UP and nothing more. It is not filed with the District Labour Office or any government authority, and no official complaint is started.'}
           </div>
+
+          {referenceError && (
+            <div role="alert" className="rounded-lg border border-rose-300 bg-rose-50 p-3 text-[11px] leading-relaxed text-rose-900">
+              {referenceError}
+            </div>
+          )}
 
           <form onSubmit={handleSubmitDispute} className="space-y-3.5 text-xs">
             

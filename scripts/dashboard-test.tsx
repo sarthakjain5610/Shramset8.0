@@ -13,6 +13,7 @@
  * Run with: npx tsx scripts/dashboard-test.tsx
  */
 import React from 'react';
+import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 
 const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
@@ -73,6 +74,8 @@ import {
   SITE_COLUMNS,
   SUPPORTED_TRADES,
   SKILL_LEVELS,
+  DashboardError,
+  requireSubmissionReference,
   type CloudAttendanceRow,
   type CloudLedgerRow,
   type CloudDisputeRow,
@@ -88,6 +91,8 @@ import {
   isLegacyGovernmentStyleReference,
   referenceDate,
   localIsoDate,
+  hasSecureRandom,
+  SubmissionReferenceError,
   SUBMISSION_REFERENCE_PREFIX,
 } from '../src/services/submissionReference';
 import type { CloudWorkerDirectoryRecord, UserProfile, Worker, DisputeGrievance } from '../src/types';
@@ -459,6 +464,58 @@ check(
   'every generated reference validates',
   Array.from(manyRefs).every((value) => isSubmissionReference(value))
 );
+
+/* --- secure randomness only: there is no Math.random() fallback --- */
+
+const referenceSource = readFileSync(
+  new URL('../src/services/submissionReference.ts', import.meta.url),
+  'utf8'
+);
+// Strip comments first: the header documents the absent fallback by name.
+const referenceCode = referenceSource
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/^\s*\/\/.*$/gm, '');
+check('reference generator never calls Math.random', !/Math\.random/.test(referenceCode));
+check('reference generator only reads randomness from Web Crypto', /getRandomValues/.test(referenceCode), 'no CSPRNG call');
+check('generator documents its failure mode', referenceSource.includes('SubmissionReferenceError'));
+check('secure randomness is available in this runtime', hasSecureRandom());
+
+const cryptoDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
+const removeCrypto = () =>
+  Object.defineProperty(globalThis, 'crypto', { value: undefined, configurable: true, writable: true });
+const restoreCrypto = () => {
+  if (cryptoDescriptor) Object.defineProperty(globalThis, 'crypto', cryptoDescriptor);
+};
+
+removeCrypto();
+try {
+  check('hasSecureRandom reports false without Web Crypto', hasSecureRandom() === false);
+
+  let thrown: unknown = null;
+  try {
+    buildSubmissionReference(new Date(2026, 10, 11));
+  } catch (caught) {
+    thrown = caught;
+  }
+  check('generator throws instead of falling back to Math.random', thrown instanceof SubmissionReferenceError, String(thrown));
+  check('thrown error carries the crypto_unavailable code', (thrown as { code?: string })?.code === 'crypto_unavailable');
+
+  let guardThrown: any = null;
+  try {
+    requireSubmissionReference();
+  } catch (caught) {
+    guardThrown = caught;
+  }
+  check(
+    'dispute write aborts with a not_configured DashboardError',
+    guardThrown instanceof DashboardError && guardThrown.kind === 'not_configured',
+    String(guardThrown)
+  );
+  check('abort message tells the worker nothing was saved', /nothing was saved/.test(String(guardThrown?.message)));
+} finally {
+  restoreCrypto();
+}
+check('secure randomness is restored for later checks', hasSecureRandom() && isSubmissionReference(buildSubmissionReference()));
 
 check('empty reference rejected', !isSubmissionReference(''));
 check('null reference rejected', !isSubmissionReference(null));
@@ -883,7 +940,7 @@ const demoGrievance: DisputeGrievance = {
 
 const createdGrievances: DisputeGrievance[] = [];
 
-async function renderDemoGrievance(lang: 'en' | 'hi') {
+async function renderDemoGrievance(lang: 'en' | 'hi', options: { withoutCrypto?: boolean } = {}) {
   const host = w.document.createElement('div');
   w.document.body.appendChild(host);
   const root = createRoot(host);
@@ -899,11 +956,18 @@ async function renderDemoGrievance(lang: 'en' | 'hi') {
       })
     );
   });
-  const text = host.textContent || '';
   const form = host.querySelector('form');
-  await act(async () => {
-    form?.dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
-  });
+  // Simulate a browser with no Web Crypto: the handler must refuse to record
+  // anything rather than invent an insecure reference.
+  if (options.withoutCrypto) removeCrypto();
+  try {
+    await act(async () => {
+      form?.dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+    });
+  } finally {
+    if (options.withoutCrypto) restoreCrypto();
+  }
+  const text = host.textContent || '';
   await act(async () => {
     root.unmount();
   });
@@ -939,6 +1003,20 @@ check(
   'demo Hindi record keeps the internal-record disclaimer',
   demoHi.includes('सरकारी प्राधिकरण में दायर नहीं')
 );
+
+const beforeNoCrypto = createdGrievances.length;
+const demoNoCrypto = await renderDemoGrievance('en', { withoutCrypto: true });
+check(
+  'demo submission records nothing without Web Crypto',
+  createdGrievances.length === beforeNoCrypto,
+  String(createdGrievances.length)
+);
+check(
+  'demo submission explains why nothing was recorded',
+  demoNoCrypto.includes('A secure reference could not be created in this browser'),
+  demoNoCrypto.slice(0, 120)
+);
+check('secure randomness is restored after the demo check', hasSecureRandom());
 
 /* ------------------------------------------------------------------------- */
 /* Report                                                                     */

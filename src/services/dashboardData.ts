@@ -21,7 +21,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import type { CloudWorkerDirectoryRecord, SkillLevel, WorkerPrivateDataRecord } from '../types';
-import { buildSubmissionReference, localIsoDate } from './submissionReference';
+import { SubmissionReferenceError, buildSubmissionReference, localIsoDate } from './submissionReference';
 import {
   completeMyWorkerOnboarding,
   getAssignedWorkerContact,
@@ -529,6 +529,27 @@ export function validateDisputeInput(input: NewDisputeInput): string[] {
   return problems;
 }
 
+/**
+ * Creates the WURK UP reference for a new grievance record.
+ *
+ * The reference comes from the Web Crypto CSPRNG only. When secure randomness is
+ * unavailable we refuse to invent a weak identifier: a predictable reference would
+ * let anyone guess another worker's record id. The write is aborted and the caller
+ * is told nothing was saved.
+ */
+export function requireSubmissionReference(build: () => string = buildSubmissionReference): string {
+  try {
+    return build();
+  } catch (caught) {
+    throw new DashboardError(
+      'not_configured',
+      caught instanceof SubmissionReferenceError
+        ? 'This browser cannot generate a secure WURK UP reference, so nothing was saved. Open WURK UP in a current browser and try again.'
+        : 'The WURK UP reference could not be created, so nothing was saved.'
+    );
+  }
+}
+
 export async function fileWorkerDispute(input: NewDisputeInput): Promise<CloudDisputeRow> {
   const client = requireClient();
   assertOnline();
@@ -537,6 +558,9 @@ export async function fileWorkerDispute(input: NewDisputeInput): Promise<CloudDi
   if (problems.length > 0) throw new DashboardError('validation', problems[0]);
 
   const filingDate = localIsoDate();
+
+  const submissionReference = requireSubmissionReference();
+
   const payload = {
     id: `DSP-${randomSuffix(10)}`,
     worker_id: input.workerId,
@@ -552,7 +576,7 @@ export async function fileWorkerDispute(input: NewDisputeInput): Promise<CloudDi
     // WURK UP internal reference. WURK UP does not file with the District Labour
     // Office or any government authority; the storage column merely keeps its
     // historical name so no migration or data rewrite is needed.
-    dlo_filing_ref: buildSubmissionReference(),
+    dlo_filing_ref: submissionReference,
     evidence_muster_count: Math.max(0, Math.round(input.evidenceMusterCount)),
   };
 
