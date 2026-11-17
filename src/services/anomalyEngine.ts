@@ -211,7 +211,7 @@ export function evaluateAnomalies(
           status: 'UNVERIFIED_PROTOTYPE_BENCHMARK',
         },
         triggerCondition: `Daily wage rate ₹${record.calculatedWage} is below the baseline reference rate of ₹${opts.statutoryMinimumWageInr}/day.`,
-        explanation: `Daily wage rate of ₹${record.calculatedWage} logged on ${record.date} is below the baseline reference of ₹${opts.statutoryMinimumWageInr}/day. IMPORTANT LEGAL NOTICE: This benchmark is an unverified prototype gazette reference; local field compliance requires official District Labour Officer notification.`,
+        explanation: `Daily wage rate of ₹${record.calculatedWage} logged on ${record.date} is below the baseline reference of ₹${opts.statutoryMinimumWageInr}/day. IMPORTANT NOTE: this benchmark is an unverified prototype gazette reference, not a legal determination; local compliance should be confirmed with official notification.`,
         suggestedAction: 'Inspect prevailing regional Minimum Wage notification issued by the MP Labour Commissioner.',
       });
     }
