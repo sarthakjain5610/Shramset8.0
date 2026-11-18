@@ -67,3 +67,26 @@ _Last verified: 2026-11-07 (Asia/Calcutta). This file contains no credentials or
 - Grievance references are generated **only** from the Web Crypto CSPRNG. There is no `Math.random()` fallback: `buildSubmissionReference()` throws `SubmissionReferenceError` (`code: 'crypto_unavailable'`) and `requireSubmissionReference()` turns that into a `DashboardError('not_configured')` whose message says nothing was saved, so a dispute row is never written with a predictable reference. The judge-demo form shows a bilingual `role="alert"` instead of recording.
 - Dashboard suite grew from 117 to 189 assertions, adding reference-format, uniqueness, legacy-detection, copy-consistency, jsdom form-interaction, judge-demo record and crypto-availability (no-`Math.random`) checks. `npm test` (60), render (13) and flow (27) suites are unchanged and still pass; `npm run build` succeeds.
 - Verified read-only: the deployed `disputes` table still has `dlo_filing_ref` and the same policies/grants. No schema, RLS, auth or production data change was made, and nothing was merged or deployed.
+
+## Session handover — 2026-11-17 (branch `arena/ec593218-shramset8-0`, PR #12)
+
+- Short version for a new owner: **[`docs/TECHNICAL_HANDOVER.md`](TECHNICAL_HANDOVER.md)** — scope,
+  commit list, changed files, root cause, SMTP state, test results, gaps. Long version:
+  `docs/technical/WURKUP_COMPLETE_TECHNICAL_MANUAL.{md,pdf}` (43 pages, 12 figures, 44 tables).
+- Branch tip `9055ea0`, base `main` @ `d85ac8d`; 10 commits; PR #12 open and `MERGEABLE`. Nothing was
+  merged, deployed, or changed in Supabase settings; the only schema change is migration 7
+  (`20261117120000_worker_identity_rls_helpers.sql`), which is already applied to the project.
+- **The 42501 outage is fixed and proven**: six participant policies ran `EXISTS (… workers w WHERE
+  w.user_id = auth.uid())` under the caller's privileges, and the column grant on `workers` excludes
+  `user_id`. Migration 7 replaces them with `SECURITY DEFINER` helpers (`is_current_worker`,
+  `is_assigned_contractor`, `can_read_worker`). Live scenario script: 9/9 groups passed; static
+  contract test: 37/37.
+- **Translation is complete**: `npm run test:i18n:strict` reports **0** hardcoded user-facing strings
+  (was 120), dictionary en 325 / hi 325. Coverage is proven; proofs of quality are not — the Hindi
+  copy has had no native review (§15.4 L3 of the manual).
+- **`npm run test:all` was broken on this branch** and now works: it chained PR #11's
+  `scripts/auth-registration-test.ts`, which does not exist here. Those 21 auth checks still exist
+  only in the combined PR #11 + #12 tree recorded in `docs/INTEGRATION_TESTING.md` and manual §14.3.
+- **Still not verified** (do not claim otherwise): real e-mail delivery through Brevo (relay/sender
+  authentication and delivery are unknown), any browser rendering (no Chromium in this sandbox —
+  run `npm run test:browser` elsewhere), and any live production deployment.
