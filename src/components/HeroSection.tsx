@@ -18,6 +18,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onNavigateTab,
   onNewWorkerClick,
 }) => {
+  // Bilingual helper for component-local chrome strings.
+  const tr = (en: string, hi: string) => (lang === 'hi' ? hi : en);
+
   const [isSpeaking, setIsSpeaking] = useState(speech.getIsSpeaking());
 
   useEffect(() => {
@@ -153,7 +156,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-ink-900 shadow-[0_30px_60px_-40px_rgba(0,0,0,0.9)]">
             <img
               src="/assets/images/shram_setu_hero_pass_1792385013356.jpg"
-              alt="Construction worker displaying a verified Smart Shram Pass at an Indore site"
+              alt={tr('Construction worker displaying a verified Smart Shram Pass at an Indore site', 'इंदौर साइट पर सत्यापित स्मार्ट श्रम पास दिखाते निर्माण श्रमिक')}
               className="h-56 w-full object-cover object-center transition-transform duration-[1200ms] group-hover:scale-[1.04] sm:h-72"
               referrerPolicy="no-referrer"
               onError={(e) => {

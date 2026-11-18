@@ -339,7 +339,7 @@ export const translations = {
     balVigyanModalTitle: 'Senior Bal Vigyan Innovation Exhibit · WurkUp',
     balVigyanModalSub: 'Developed in Indore, Madhya Pradesh · Civic-Tech for 450M+ Unorganised Workers',
     balVigyanGenesisTitle: 'The Genesis & Core Problem:',
-    balVigyanGenesisBody: 'In India, informal daily-wage construction laborers, masons, and helpers face chronic wage theft, arbitrary pay cuts, missing overtime records, and lack of proof of work. Because attendance registers (muster rolls) are held exclusively by labor contractors (पेटी ठेकेदार), workers have zero evidence when disputes arise.',
+    balVigyanGenesisBody: 'In India, informal daily-wage construction laborers, masons, and helpers face chronic wage theft, arbitrary pay cuts, missing overtime records, and lack of proof of work. Because attendance registers (muster rolls) are held exclusively by sub-contractors (peti thekedar), workers have zero evidence when disputes arise.',
     balVigyanPillar1Title: '1. Cryptographic Smart Pass',
     balVigyanPillar1Body: 'Physical/Digital hybrid card with offline QR verification, e-Shram UAN linkage, and SHA256 integrity token.',
     balVigyanPillar2Title: '2. Zero-Literacy Voice Engine',
