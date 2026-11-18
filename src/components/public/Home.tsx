@@ -421,7 +421,11 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
               Built for both sides of a <span className="italic text-forest-700">handshake</span>
             </>
           }
-          description="Exploitation thrives on asymmetric records. WurkUp gives workers and contractors the same immutable ledger — so neither side has to argue about what happened."
+          description={tr(
+            lang,
+            'Exploitation thrives on asymmetric records. WurkUp gives workers and contractors the same immutable ledger — so neither side has to argue about what happened.',
+            'शोषण वहीं पनपता है जहाँ रिकॉर्ड एक पक्ष के पास हो। WurkUp कामगार और ठेकेदार दोनों को एक ही अपरिवर्तनीय बही देता है — ताकि किसी को यह बहस न करनी पड़े कि असल में हुआ क्या।',
+          )}
         />
 
         <div className="mt-12 grid items-stretch gap-6 md:grid-cols-2 lg:gap-8">
@@ -492,8 +496,11 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
                   {tr(lang, 'Run a compliant muster with no paperwork', 'बिना कागज़ी कार्रवाई के नियम-सम्मत हाजिरी चलाएँ')}
                 </h3>
                 <p className="mt-2.5 text-[13px] leading-relaxed text-sand-200/60">
-                  Replace the khata diary with a live site register that settles disputes before
-                  they start — and produces audit-ready evidence on demand.
+                  {tr(
+                    lang,
+                    'Replace the khata diary with a live site register that settles disputes before they start — and produces audit-ready evidence on demand.',
+                    'खाता डायरी की जगह साइट का लाइव रजिस्टर — विवाद शुरू होने से पहले ही सुलझ जाता है, और ऑडिट के लिए सबूत तुरंत तैयार मिलते हैं।',
+                  )}
                 </p>
 
                 <ul className="mt-6 space-y-3">

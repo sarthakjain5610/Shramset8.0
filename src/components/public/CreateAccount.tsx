@@ -36,7 +36,10 @@ const TRADES = [
   'Painter & Putty Applicator (पेंटर)',
 ];
 
-export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
+export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate, lang }) => {
+  // Bilingual helper: every user-facing string in this component is authored in
+  // both languages, so a Hindi reader never sees an English fragment.
+  const tr = (en: string, hi: string) => (lang === 'hi' ? hi : en);
   const [accountType, setAccountType] = useState<'worker' | 'contractor'>('worker');
 
   // Form fields
@@ -111,25 +114,43 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
     if (res.success && res.user) {
       onNavigate(res.user.role === 'worker' ? 'worker' : 'contractor');
     } else {
-      setError(res.error || 'Failed to create account. Please verify details.');
+      setError(
+        res.error || tr('Failed to create account. Please verify details.', 'खाता नहीं बन सका। कृपया विवरण जाँचें।'),
+      );
     }
   };
 
   return (
     <AuthLayout
-      eyebrow="Create account"
-      title="Set up your WurkUp record"
-      subtitle="One account, a permanent QR pass, and a wage ledger you can show to any authority."
+      eyebrow={tr('Create account', 'खाता बनाएँ')}
+      title={tr('Set up your WurkUp record', 'अपना WurkUp रिकॉर्ड बनाएँ')}
+      subtitle={tr(
+        'One account, a permanent QR pass, and a wage ledger you can show to any authority.',
+        'एक खाता, एक स्थायी QR पास, और मजदूरी की बही — जो आप किसी भी अधिकारी को दिखा सकते हैं।',
+      )}
       icon={<ShieldCheck className="h-5 w-5" />}
       onNavigate={onNavigate}
+      lang={lang}
       width="lg"
-      asideTitle="Two minutes now saves a season of arguments later."
-      asidePoints={[
-        'Free for workers — permanently',
-        'No Aadhaar number collected or printed',
-        'Records stored locally first, then synced',
-        'Cancel or export your data at any time',
-      ]}
+      asideTitle={tr(
+        'Two minutes now saves a season of arguments later.',
+        'अभी दो मिनट लगाएँ, आगे पूरे सीज़न की बहस बचाएँ।',
+      )}
+      asidePoints={
+        lang === 'hi'
+          ? [
+              'कामगारों के लिए हमेशा मुफ़्त',
+              'आधार नंबर न लिया जाता है, न छापा जाता है',
+              'रिकॉर्ड पहले फ़ोन में सुरक्षित, फिर सिंक होते हैं',
+              'कभी भी डेटा निर्यात करें या हटवाएँ',
+            ]
+          : [
+              'Free for workers — permanently',
+              'No Aadhaar number collected or printed',
+              'Records stored locally first, then synced',
+              'Cancel or export your data at any time',
+            ]
+      }
     >
       {error && (
         <div
@@ -144,20 +165,20 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Role selector */}
         <fieldset>
-          <legend className="label">I am registering as</legend>
+          <legend className="label">{tr('I am registering as', 'मैं पंजीकरण कर रहा/रही हूँ')}</legend>
           <div className="grid grid-cols-2 gap-3">
             {[
               {
                 id: 'worker' as const,
                 icon: Users,
-                title: 'Worker',
-                hint: 'Daily wage, artisan, mason, helper',
+                title: tr('Worker', 'कामगार'),
+                hint: tr('Daily wage, artisan, mason, helper', 'दिहाड़ी, कारीगर, राजमिस्त्री, हेल्पर'),
               },
               {
                 id: 'contractor' as const,
                 icon: Building2,
-                title: 'Contractor',
-                hint: 'Builder, site engineer, supervisor',
+                title: tr('Contractor', 'ठेकेदार'),
+                hint: tr('Builder, site engineer, supervisor', 'बिल्डर, साइट इंजीनियर, सुपरवाइज़र'),
               },
             ].map((option) => {
               const Icon = option.icon;
@@ -210,7 +231,7 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
           {/* Full name */}
           <div className="sm:col-span-2">
             <label htmlFor="full-name" className="label">
-              Full legal name <span className="text-rose-500">*</span>
+              {tr('Full legal name', 'पूरा कानूनी नाम')} <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
               <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
@@ -221,7 +242,11 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
                 autoComplete="name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder={accountType === 'worker' ? 'e.g. Rameshwar Lal Ahirwar' : 'e.g. Anil Sisodiya'}
+                placeholder={
+                  accountType === 'worker'
+                    ? tr('e.g. Rameshwar Lal Ahirwar', 'जैसे रामेश्वर लाल अहिरवार')
+                    : tr('e.g. Anil Sisodiya', 'जैसे अनिल सिसोदिया')
+                }
                 className="field field-icon"
               />
             </div>
@@ -230,7 +255,7 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
           {/* Phone */}
           <div>
             <label htmlFor="phone" className="label">
-              Mobile number <span className="text-rose-500">*</span>
+              {tr('Mobile number', 'मोबाइल नंबर')} <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
               <Phone className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
@@ -246,18 +271,21 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
               />
             </div>
             <p className="mt-1.5 text-[10px] leading-snug text-ink-400">
-              Used only for mutual contact checks — never printed on the QR pass.
+              {tr(
+                'Used only for mutual contact checks — never printed on the QR pass.',
+                'सिर्फ़ आपसी संपर्क पुष्टि के लिए — QR पास पर कभी नहीं छपता।',
+              )}
             </p>
           </div>
 
           {/* Email */}
           <div>
             <label htmlFor="email" className="label">
-              Email address{' '}
+              {tr('Email address', 'ईमेल पता')}{' '}
               {accountType === 'contractor' ? (
                 <span className="text-rose-500">*</span>
               ) : (
-                <span className="font-medium text-ink-400">(optional)</span>
+                <span className="font-medium text-ink-400">{tr('(optional)', '(वैकल्पिक)')}</span>
               )}
             </label>
             <div className="relative">
@@ -275,15 +303,21 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
             </div>
             <p className="mt-1.5 text-[10px] leading-snug text-ink-400">
               {accountType === 'contractor'
-                ? 'Required for audit correspondence and account recovery.'
-                : 'Add one to recover your account without a phone call.'}
+                ? tr(
+                    'Required for audit correspondence and account recovery.',
+                    'ऑडिट पत्राचार और खाता पुनःप्राप्ति के लिए ज़रूरी।',
+                  )
+                : tr(
+                    'Add one to recover your account without a phone call.',
+                    'जोड़ें, ताकि बिना फ़ोन किए भी खाता वापस मिल सके।',
+                  )}
             </p>
           </div>
 
           {/* Password */}
           <div className={accountType === 'worker' ? '' : 'sm:col-span-2'}>
             <label htmlFor="new-password" className="label">
-              Password <span className="text-rose-500">*</span>
+              {tr('Password', 'पासवर्ड')} <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
               <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
@@ -295,13 +329,17 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Minimum 6 characters"
+                placeholder={tr('Minimum 6 characters', 'कम से कम 6 अक्षर')}
                 className="field field-icon pr-11"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={
+                  showPassword
+                    ? tr('Hide password', 'पासवर्ड छिपाएँ')
+                    : tr('Show password', 'पासवर्ड दिखाएँ')
+                }
                 className="absolute right-2.5 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-lg text-ink-400 transition-colors hover:bg-sand-100 hover:text-ink-700 cursor-pointer"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -365,7 +403,7 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
           {accountType === 'contractor' && (
             <div className="sm:col-span-2">
               <label htmlFor="organization" className="label">
-                Firm / agency name
+                {tr('Firm / agency name', 'फ़र्म / एजेंसी का नाम')}
               </label>
               <div className="relative">
                 <Building2 className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
@@ -375,7 +413,7 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
                   autoComplete="organization"
                   value={organizationName}
                   onChange={(e) => setOrganizationName(e.target.value)}
-                  placeholder="e.g. Narmada Infra Engineering Ltd."
+                  placeholder={tr('e.g. Narmada Infra Engineering Ltd.', 'जैसे नर्मदा इंफ्रा इंजीनियरिंग लि.')}
                   className="field field-icon"
                 />
               </div>
@@ -393,8 +431,10 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
               className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-ink-300 accent-forest-700 focus:ring-forest-600"
             />
             <span className="text-[11px] leading-relaxed text-ink-600">
-              I consent to sharing my registered mobile number with my authorised workplace
-              counterpart for manual shift cross-checks.
+              {tr(
+                'I consent to sharing my registered mobile number with my authorised workplace counterpart for manual shift cross-checks.',
+                'मैं अपना पंजीकृत मोबाइल नंबर अपने अधिकृत कार्यस्थल साथी के साथ साझा करने की सहमति देता/देती हूँ, ताकि शिफ्ट की मैनुअल पुष्टि हो सके।',
+              )}
             </span>
           </label>
 
@@ -407,16 +447,18 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
               className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-ink-300 accent-forest-700 focus:ring-forest-600"
             />
             <span className="text-[11px] leading-relaxed text-ink-600">
-              I agree to the{' '}
+              {tr('I agree to the', 'मैं सहमत हूँ')}{' '}
               <button
                 type="button"
                 onClick={() => onNavigate('privacy')}
                 className="font-semibold text-forest-800 underline decoration-forest-300 underline-offset-2 hover:text-forest-900 cursor-pointer"
               >
-                Privacy and Data Use Policy
+                {tr('Privacy and Data Use Policy', 'गोपनीयता एवं डेटा उपयोग नीति')}
               </button>
-              . My shift and wage records will be maintained under Madhya Pradesh labour welfare
-              standards.
+              {tr(
+                '. My shift and wage records will be maintained under Madhya Pradesh labour welfare standards.',
+                '। मेरे शिफ्ट और मजदूरी रिकॉर्ड मध्य प्रदेश श्रम कल्याण मानकों के तहत रखे जाएँगे।',
+              )}
             </span>
           </label>
         </div>
@@ -425,24 +467,25 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
           {isLoading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Creating your account…
+              {tr('Creating your account…', 'आपका खाता बन रहा है…')}
             </>
           ) : (
             <>
-              Register as {accountType === 'worker' ? 'worker' : 'contractor'}
+              {tr('Register as', 'पंजीकरण करें')}{' '}
+              {accountType === 'worker' ? tr('worker', 'कामगार') : tr('contractor', 'ठेकेदार')}
               <ArrowRight className="h-4 w-4" />
             </>
           )}
         </button>
 
         <p className="text-center text-[11.5px] text-ink-500">
-          Already registered?{' '}
+          {tr('Already registered?', 'पहले से पंजीकृत हैं?')}{' '}
           <button
             type="button"
             onClick={() => onNavigate('sign-in')}
             className="font-bold text-forest-800 hover:underline cursor-pointer"
           >
-            Sign in instead
+            {tr('Sign in instead', 'साइन इन करें')}
           </button>
         </p>
       </form>

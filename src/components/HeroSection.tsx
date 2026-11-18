@@ -174,7 +174,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-forest-300" />
                   <div className="min-w-0">
                     <span className="block truncate text-[11.5px] font-bold text-white">
-                      Rameshwar Lal Ahirwar
+                      {tr('Rameshwar Lal Ahirwar', 'रामेश्वर लाल अहिरवार')}
                     </span>
                     <span className="block truncate text-[10px] text-sand-200/62">
                       {t('heroCardSubtext', lang)}

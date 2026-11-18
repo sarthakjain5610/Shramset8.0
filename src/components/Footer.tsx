@@ -76,10 +76,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onEnterJudgeDemo, la
 
             <div className="mt-6 flex flex-wrap gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-sand-200/70">
-                <ShieldCheck className="h-3 w-3 text-forest-300" /> MP Minimum Wages aligned
+                <ShieldCheck className="h-3 w-3 text-forest-300" /> {tr('MP Minimum Wages aligned', 'एमपी न्यूनतम मजदूरी के अनुरूप')}
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-sand-200/70">
-                <LockKeyhole className="h-3 w-3 text-brass-300" /> SHA-256 audit chain
+                <LockKeyhole className="h-3 w-3 text-brass-300" /> {tr('SHA-256 audit chain', 'SHA-256 ऑडिट चेन')}
               </span>
             </div>
           </div>

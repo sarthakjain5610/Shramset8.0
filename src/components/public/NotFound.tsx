@@ -17,12 +17,23 @@ interface NotFoundProps {
  */
 export const NotFound: React.FC<NotFoundProps> = ({ onNavigate, lang }) => {
   const copy = getPublicCopy(lang);
+  // Bilingual helper: every user-facing string in this component is authored in
+  // both languages, so a Hindi reader never sees an English fragment.
+  const tr = (en: string, hi: string) => (lang === 'hi' ? hi : en);
 
   const links: { route: AppRoute; label: string; hint: string }[] = [
-    { route: 'home', label: copy.nav.home, hint: 'Start from the overview' },
-    { route: 'how-it-works', label: copy.nav.howItWorks, hint: 'How a shift becomes a record' },
-    { route: 'verify', label: 'Verify a pass', hint: 'Check a QR reference' },
-    { route: 'help', label: copy.nav.help, hint: 'Reach a coordinator' },
+    { route: 'home', label: copy.nav.home, hint: tr('Start from the overview', 'पहले सारांश देखें') },
+    {
+      route: 'how-it-works',
+      label: copy.nav.howItWorks,
+      hint: tr('How a shift becomes a record', 'शिफ्ट रिकॉर्ड कैसे बनती है'),
+    },
+    {
+      route: 'verify',
+      label: tr('Verify a pass', 'पास सत्यापित करें'),
+      hint: tr('Check a QR reference', 'QR संदर्भ जाँचें'),
+    },
+    { route: 'help', label: copy.nav.help, hint: tr('Reach a coordinator', 'समन्वयक से संपर्क करें') },
   ];
 
   return (
@@ -41,14 +52,16 @@ export const NotFound: React.FC<NotFoundProps> = ({ onNavigate, lang }) => {
             </span>
 
             <p className="mt-6 font-mono text-[11px] font-bold tracking-[0.28em] text-brass-600">
-              404 · ROUTE NOT FOUND
+              {tr('404 · ROUTE NOT FOUND', '404 · पृष्ठ नहीं मिला')}
             </p>
             <h1 className="mt-3 text-[1.9rem] leading-tight text-ink-950 sm:text-[2.4rem]">
-              This page is not on the bridge.
+              {tr('This page is not on the bridge.', 'यह पृष्ठ हमारे पास नहीं है।')}
             </h1>
             <p className="mx-auto mt-3 max-w-md text-[12.5px] leading-relaxed text-ink-500">
-              The link may be mistyped or out of date. Nothing was lost — your records are stored
-              against your own account, not against this URL.
+              {tr(
+                'The link may be mistyped or out of date. Nothing was lost — your records are stored against your own account, not against this URL.',
+                'हो सकता है लिंक गलत टाइप हुआ हो या पुराना हो। कुछ भी खोया नहीं — आपके रिकॉर्ड आपके खाते में सुरक्षित हैं, इस URL में नहीं।',
+              )}
             </p>
 
             <div className="mt-7 grid gap-2.5 sm:grid-cols-2">
@@ -81,7 +94,7 @@ export const NotFound: React.FC<NotFoundProps> = ({ onNavigate, lang }) => {
                 className="inline-flex items-center gap-1.5 font-semibold text-ink-500 hover:text-forest-800 cursor-pointer"
               >
                 <QrCode className="h-3.5 w-3.5" />
-                Scanning a pass instead?
+                {tr('Scanning a pass instead?', 'पास स्कैन करना है?')}
               </button>
             </div>
           </div>

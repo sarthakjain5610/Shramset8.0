@@ -911,7 +911,7 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
                     }
                   }}
                   className="flex items-center gap-1.5 px-3.5 py-2 bg-brass-600 hover:bg-brass-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer"
-                  title="Print or Save as PDF"
+                  title={lang === 'hi' ? 'प्रिंट करें या PDF में सहेजें' : 'Print or Save as PDF'}
                 >
                   <Printer className="w-4 h-4 shrink-0" />
                   <span>{lang === 'hi' ? 'प्रिंट करें / Save PDF' : 'Print Pass / Save PDF'}</span>
@@ -922,7 +922,7 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
                   type="button"
                   onClick={handleCopyPassRecord}
                   className="flex items-center gap-1.5 px-3 py-2 bg-sand-100 hover:bg-sand-200 text-ink-700 text-xs font-semibold rounded-lg border border-ink-300 transition-colors cursor-pointer"
-                  title="Copy certified record"
+                  title={lang === 'hi' ? 'प्रमाणित रिकॉर्ड कॉपी करें' : 'Copy certified record'}
                 >
                   {copiedRecord ? <Check className="w-4 h-4 text-forest-600 shrink-0" /> : <Copy className="w-4 h-4 shrink-0" />}
                   <span>{copiedRecord ? (lang === 'hi' ? 'सत्यापन कॉपी हुआ!' : 'Copied!') : (lang === 'hi' ? 'विवरण कॉपी करें' : 'Copy Details')}</span>
@@ -933,7 +933,7 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
                   type="button"
                   onClick={() => setShowPrintModal(false)}
                   className="p-2 text-ink-400 hover:text-ink-700 hover:bg-sand-100 rounded-lg transition-colors cursor-pointer"
-                  aria-label="Close Print Preview"
+                  aria-label={lang === 'hi' ? 'प्रिंट पूर्वावलोकन बंद करें' : 'Close Print Preview'}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1115,7 +1115,9 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
               <div className="border border-ink-300 rounded-xl p-3 bg-sand-50 space-y-2">
                 <div className="flex items-center justify-between border-b border-sand-200 pb-1.5 text-xs font-bold text-ink-900">
                   <span>{lang === 'hi' ? 'सत्यापित कार्य एवं मजदूरी सारांश (म.प्र. शासन)' : 'VERIFIED MUSTER & STATUTORY WAGE RECORD'}</span>
-                  <span className="text-[10px] font-mono text-ink-500">Sec 20, Min Wages Act 1948</span>
+                  <span className="text-[10px] font-mono text-ink-500">
+                    {lang === 'hi' ? 'धारा 20, न्यूनतम मजदूरी अधिनियम 1948' : 'Sec 20, Min Wages Act 1948'}
+                  </span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                   <div className="bg-white p-2 rounded border border-sand-200">
@@ -1146,7 +1148,9 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
                   <span>WhatsApp: <strong className="font-mono">+{APP_CONFIG.WHATSAPP_NUMBER}</strong></span>
                 </div>
                 <div className="font-mono text-[9px] text-ink-500">
-                  WurkUp · Senior Bal Vigyan Indore Innovation
+                  {lang === 'hi'
+                    ? 'WurkUp · सीनियर बाल विज्ञान इंदौर इनोवेशन'
+                    : 'WurkUp · Senior Bal Vigyan Indore Innovation'}
                 </div>
               </div>
 
@@ -1381,7 +1385,9 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
                 {lang === 'hi' ? 'सत्यापित कार्य एवं मजदूरी सारांश (WurkUp रिकॉर्ड)' : 'VERIFIED MUSTER & STATUTORY WAGE RECORD (WURKUP)'}
               </h3>
               <span className="text-[10px] font-mono text-ink-500">
-                Section 20, Minimum Wages Act 1948
+                {lang === 'hi'
+                  ? 'धारा 20, न्यूनतम मजदूरी अधिनियम 1948'
+                  : 'Section 20, Minimum Wages Act 1948'}
               </span>
             </div>
 
@@ -1395,7 +1401,9 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
               <div className="bg-white p-2.5 rounded-lg border border-sand-200">
                 <span className="text-[10px] text-ink-500 block">{t('statsGrossEarned', lang)}</span>
                 <span className="text-base font-bold font-mono text-ink-900">{formatCurrency(displayEarned)}</span>
-                <span className="text-[9px] text-ink-500 block">Base Statutory Rate</span>
+                <span className="text-[9px] text-ink-500 block">
+                  {lang === 'hi' ? 'आधार वैधानिक दर' : 'Base Statutory Rate'}
+                </span>
               </div>
 
               <div className="bg-white p-2.5 rounded-lg border border-sand-200">
@@ -1435,7 +1443,9 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
               <span>WhatsApp: <strong className="font-mono">+{APP_CONFIG.WHATSAPP_NUMBER}</strong></span>
             </div>
             <div className="text-right font-mono text-[9px] text-ink-500">
-              WurkUp · Senior Bal Vigyan Indore Innovation · MP BOCW Aligned
+              {lang === 'hi'
+                ? 'WurkUp · सीनियर बाल विज्ञान इंदौर इनोवेशन · एमपी BOCW अनुरूप'
+                : 'WurkUp · Senior Bal Vigyan Indore Innovation · MP BOCW Aligned'}
             </div>
           </div>
 
