@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Users,
   Building2,
@@ -52,7 +52,9 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
 
   // Status
   const [error, setError] = useState<string | null>(null);
+  const [registrationStatus, setRegistrationStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const submitLock = useRef(false);
 
   const passwordScore = useMemo(() => {
     let score = 0;
@@ -64,6 +66,7 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitLock.current || registrationStatus) return;
     setError(null);
 
     if (!fullName.trim()) {
@@ -76,8 +79,8 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
       return;
     }
 
-    if (!email.trim() && accountType === 'contractor') {
-      setError('Contractors must provide a work email address for audit correspondence.');
+    if (!email.trim()) {
+      setError('Email is required for every account because phone sign-in is not enabled.');
       return;
     }
 
@@ -91,13 +94,13 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
       return;
     }
 
+    submitLock.current = true;
     setIsLoading(true);
-
     const params: SignUpParams = {
       role: accountType,
       fullName: fullName.trim(),
       phone: phone.trim(),
-      email: email.trim() || undefined,
+      email: email.trim(),
       password,
       trade: accountType === 'worker' ? trade : undefined,
       organizationName: accountType === 'contractor' ? organizationName.trim() : undefined,
@@ -105,13 +108,22 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
       privacyAccepted,
     };
 
-    const res = await auth.signUp(params);
-    setIsLoading(false);
-
-    if (res.success && res.user) {
-      onNavigate(res.user.role === 'worker' ? 'worker' : 'contractor');
-    } else {
-      setError(res.error || 'Failed to create account. Please verify details.');
+    try {
+      const res = await auth.signUp(params);
+      if (!res.success) {
+        setError(res.error);
+      } else if (res.state === 'authenticated') {
+        onNavigate(res.user.role === 'worker' ? 'worker' : 'contractor');
+      } else if (res.state === 'confirmation_pending') {
+        setRegistrationStatus(`Registration was accepted for ${res.email}. Verify your email using the confirmation link before signing in. Check your spam folder if it does not arrive. Do not register again.`);
+      } else {
+        setRegistrationStatus(`Your account registration was accepted for ${res.email}, but profile setup could not yet be confirmed. Do not register again; try signing in later or contact support.`);
+      }
+    } catch {
+      setError('We could not confirm the registration result. Do not submit repeatedly; try signing in or password recovery, or contact support.');
+    } finally {
+      setIsLoading(false);
+      submitLock.current = false;
     }
   };
 
@@ -141,7 +153,16 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      {registrationStatus && (
+        <div role="status" className="mb-5 rounded-xl border border-forest-200 bg-forest-50 p-4 text-sm text-forest-900">
+          <p>{registrationStatus}</p>
+          <button type="button" onClick={() => onNavigate('sign-in')} className="mt-3 font-bold underline underline-offset-2">
+            Go to sign in
+          </button>
+        </div>
+      )}
+
+      {!registrationStatus && <form onSubmit={handleSubmit} className="space-y-5">
         {/* Role selector */}
         <fieldset>
           <legend className="label">I am registering as</legend>
@@ -253,12 +274,7 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
           {/* Email */}
           <div>
             <label htmlFor="email" className="label">
-              Email address{' '}
-              {accountType === 'contractor' ? (
-                <span className="text-rose-500">*</span>
-              ) : (
-                <span className="font-medium text-ink-400">(optional)</span>
-              )}
+              Email address <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
               <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
@@ -266,7 +282,7 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
                 id="email"
                 type="email"
                 autoComplete="email"
-                required={accountType === 'contractor'}
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
@@ -274,9 +290,7 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
               />
             </div>
             <p className="mt-1.5 text-[10px] leading-snug text-ink-400">
-              {accountType === 'contractor'
-                ? 'Required for audit correspondence and account recovery.'
-                : 'Add one to recover your account without a phone call.'}
+              Required for account confirmation, sign-in and account recovery. Phone sign-in is not enabled.
             </p>
           </div>
 
@@ -445,7 +459,7 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate }) => {
             Sign in instead
           </button>
         </p>
-      </form>
+      </form>}
     </AuthLayout>
   );
 };

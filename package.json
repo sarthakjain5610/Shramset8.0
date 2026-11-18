@@ -12,7 +12,8 @@
     "test": "tsx scripts/run-all-tests.ts",
     "test:render": "tsx scripts/smoke-render.ts",
     "test:ui": "tsx scripts/flow-test.ts",
-    "test:all": "tsc --noEmit && tsx scripts/run-all-tests.ts && tsx scripts/smoke-render.ts && tsx scripts/flow-test.ts",
+    "test:all": "tsc --noEmit && tsx scripts/run-all-tests.ts && tsx scripts/auth-registration-test.ts && tsx scripts/smoke-render.ts && tsx scripts/flow-test.ts",
+    "test:auth": "tsx scripts/auth-registration-test.ts",
     "build:offline": "tsx scripts/build-offline.ts",
     "test:offline": "tsx scripts/offline-smoke.ts",
     "test:service-worker": "node scripts/service-worker-preview-smoke.mjs"
