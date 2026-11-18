@@ -78,7 +78,7 @@ WURK UP record with a visible disclaimer.
 | O2 | Neither party can silently rewrite history | determinism + predecessor hash pointers, audit bench | Prototype/demo only (bench operates on demo data) |
 | O3 | Wage maths is statutory, not opinion | integer-paise engine with MP Minimum Wages bands | Verified active (60 core tests) |
 | O4 | The worker's identity is not in the QR code | opaque token only, resolution server-side | Verified active (code + tests) |
-| O5 | A Hindi reader never sees an English wall | typed bilingual dictionaries, audit script | Partially verified (§13) |
+| O5 | A Hindi reader never sees an English wall | typed bilingual dictionaries, strict audit script (0 hardcoded strings) | Verified for coverage (§13); copy not yet proofread (§15.4 L3) |
 | O6 | No private data reaches a contractor without consent | column grants + SECURITY DEFINER RPC + consent flag | Verified active (RLS regression tests) |
 | O7 | Nothing pretends to be an official filing | disclaimer in the grievance flow, internal reference format | Verified active (189 dashboard checks) |
 
@@ -782,10 +782,12 @@ render `undefined` — but the audit exists precisely to make that fallback unne
 | Run | Dictionary problems | Hardcoded occurrences |
 | --- | --- | --- |
 | Before this work | 5 (untranslated toggles, Devanagari inside an English string) | 264 (heuristic noise) / 187 (cleaned) |
-| After this work | **0** | **147** across 23 files |
+| After the public-shell pass | **0** | 120 across 21 files |
+| After the dashboard and auth pass (current) | **0** | **0 — nothing left to inventory** |
 
-Commands: `npm run test:i18n` (report) and `npm run test:i18n:strict` (fails on any hardcoded string,
-intended as the ratchet for future work).
+Commands: `npm run test:i18n` (report) and `npm run test:i18n:strict` (fails on any hardcoded string).
+Strict mode now **passes**; it stays in the suite as the ratchet that keeps new English literals from
+slipping in.
 
 ### 13.3 What was corrected, and what remains
 
@@ -795,11 +797,17 @@ intended as the ratchet for future work).
 | Header, footer, hero pass preview | English literals | bilingual |
 | About page (story, principles, welfare alignment, CTA, chips) | English only, with a "page available in English" notice | fully bilingual content arrays |
 | Site-wide dictionary | 5 integrity defects | 0 defects |
-| Judge Demo long-form descriptions, contact-verification dialog, some contractor demo labels, Help/Contact FAQ answers, Privacy sections | English literals | **still outstanding** (147 occurrences, §17) |
+| Judge Demo tour (four tabs), contact-verification dialog, Help/Contact categories and FAQ, Privacy policy sections, Not Found, Sign In / Create Account / Password Recovery shells, Worker Portal status and empty states, Contractor Dashboard roster, punch/payment/scan/dispute/audit panels, Worker Card certificate labels | English literals | bilingual `tr()` / `bi(lang, …)` values — **0 hardcoded strings remain** |
 
-The remaining 147 occurrences are enumerated file-by-file by `npm run test:i18n`, so the work is
-measurable rather than anecdotal. A Hindi reader currently encounters English fragments only in the
-areas listed in the third row.
+Every screen was finished in the same pattern: a `tr(en, hi)` helper (or the pre-existing
+`bi(lang, en, hi)`) at the top of the component, English-only data arrays rewritten as `{ en, hi }`
+records or as builder functions that take the helper, and legal or formula-bearing labels — "Section
+20, Minimum Wages Act 1948", the RULE-01…07 notices, the SHA-256 chain wording — translated as whole
+sentences rather than word by word, because a half-translated statute reads worse than none.
+
+`npm run test:i18n:strict` reports **0 hardcoded user-facing strings** across `src/`, so the
+remaining gap is no longer coverage but review quality: the Hindi copy is authored, consistent with
+the existing dictionary, and unverified by a native proofreader (§15.4 L3).
 
 ---
 
@@ -830,7 +838,7 @@ areas listed in the third row.
 | Dashboard | **189 / 189** | headless (SSR + jsdom) |
 | RLS contract (static) | **37 / 37** | headless |
 | RLS live (SQL, rolled back) | **9 / 9 scenario groups** | live Supabase project |
-| Translation dictionary | **0 defects** (147 hardcoded strings inventoried) | headless |
+| Translation dictionary | **0 defects**, 0 hardcoded strings (strict audit passes) | headless |
 | Screen render | **13 / 13** | headless |
 | Flows | **27 / 27** | headless |
 | Production build | **success** | sandbox |
@@ -904,7 +912,7 @@ payment occurred. This is stated in the UI wherever a contractor might expect a 
 | --- | --- | --- | --- |
 | L1 | No admin/support console | operators cannot correct records through the product | deliberate: no privileged bypass exists |
 | L2 | Dispute responses have no client write path | contractor response must be inserted out-of-band | documented as "Not connected" |
-| L3 | 147 hardcoded English strings remain | partial Hindi coverage in Judge Demo, help FAQ, privacy, some contractor demo labels | inventoried by `test:i18n`; §17 |
+| L3 | Hindi copy is authored, not proofread | legal and statutory sentences could read awkwardly to a native speaker | `test:i18n` proves coverage, not quality; native review before public launch (§17) |
 | L4 | No secondary database indexes | irrelevant at current volume; could degrade at scale | planned (§17) |
 | L5 | E-mail delivery unverified | signup/recovery may fail silently for users | §10 checklist |
 | L6 | Password minimum 6 characters | weak against guessing | raise in provider settings |
@@ -957,7 +965,7 @@ re-running it is safe; migrations 1–6 are not to be touched.
 
 | Item | Category | Current state | Next step |
 | --- | --- | --- | --- |
-| Remaining Hindi coverage (147 strings) | translation | outstanding | work through `npm run test:i18n` output; until then strict mode fails by design |
+| Hindi proofreading | translation quality | coverage complete (0 hardcoded strings), copy unreviewed | native-speaker review of the statutory and grievance wording |
 | Brevo relay + sender domain | operations | configured but unverified | enable relay, verify domain, publish SPF/DKIM |
 | Branded bilingual e-mail templates | product | default templates | author Hindi/English HTML |
 | Password policy | security | 6-character minimum | raise to 10 + HIBP check |
@@ -1112,6 +1120,6 @@ asserted from memory or from a previous run of a different commit.
 | Policies cannot silently regress | `npm run test:rls` — 37 static checks over the migration files | 2026-11-17 | Verified (37/37) |
 | Type safety and build | `npx tsc --noEmit`, `npm run build` | 2026-11-17 | Verified (0 errors, build succeeds) |
 | Screen, flow and dashboard behaviour | `npm run test:render`, `test:ui`, `test:dashboard` (13 / 27 / 189 checks) | 2026-11-17 | Verified (all passed) |
-| Translation dictionary integrity | `npm run test:i18n` (key parity, script purity, hardcoded-string inventory) | 2026-11-17 | Verified (0 dictionary defects) |
+| Translation dictionary integrity | `npm run test:i18n` and `test:i18n:strict` (key parity, script purity, hardcoded-string inventory) | 2026-11-17 | Verified (0 dictionary defects, 0 hardcoded strings) |
 | Auth, SMTP and redirect configuration | Supabase Auth configuration read through the provider API | 2026-11-17 | Verified (values recorded, secrets omitted) |
 
