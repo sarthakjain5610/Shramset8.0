@@ -37,8 +37,8 @@ export const SignIn: React.FC<SignInProps> = ({ onNavigate, onEnterJudgeDemo, la
     if (!loginId.trim()) {
       setError(
         tr(
-          'Please enter your registered mobile number or email address.',
-          'कृपया अपना पंजीकृत मोबाइल नंबर या ईमेल पता भरें।',
+          'Please enter your registered email address. Phone sign-in is not enabled.',
+          'कृपया अपना पंजीकृत ईमेल पता दर्ज करें। मोबाइल नंबर से साइन इन की सुविधा चालू नहीं है।',
         ),
       );
       return;
@@ -132,18 +132,18 @@ export const SignIn: React.FC<SignInProps> = ({ onNavigate, onEnterJudgeDemo, la
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="login-id" className="label">
-            {tr('Mobile number or email', 'मोबाइल नंबर या ईमेल')}
+            {tr('Email address', 'ईमेल पता')}
           </label>
           <div className="relative">
             <Phone className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
             <input
               id="login-id"
-              type="text"
+              type="email"
               required
               autoComplete="username"
               value={loginId}
               onChange={(e) => setLoginId(e.target.value)}
-              placeholder="+91 98260 12345 or name@example.com"
+              placeholder="name@example.com"
               className="field field-icon"
             />
           </div>

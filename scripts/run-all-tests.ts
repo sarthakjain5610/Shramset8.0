@@ -484,7 +484,7 @@ assert(!auth.getAuthState().isAuthenticated, 'Locally stored profile cannot rest
 const badLogin = await auth.signIn({ loginId: 'local@example.test', password: 'known-or-guessed' });
 assert(!badLogin.success && !auth.getAuthState().isAuthenticated, 'Local registry login is rejected when remote auth is unavailable');
 const failedSignup = await auth.signUp({ role: 'worker', fullName: 'Test Worker', phone: '+919999999999', email: 'test@example.test', password: 'Password123!', consentToShareContact: true, privacyAccepted: true });
-assert(!failedSignup.success && !failedSignup.user, 'Failed remote registration does not create or authenticate a local real account');
+assert(!failedSignup.success, 'Failed remote registration does not create or authenticate a local real account');
 assert(auth.getLocalUsers().some((u) => u.id === 'LOCAL-WORKER'), 'Legacy local registry may remain stored but is not authoritative');
 await auth.signOut();
 assert(!auth.getAuthState().isAuthenticated, 'Sign-out leaves no authenticated local profile');

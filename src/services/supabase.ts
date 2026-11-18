@@ -1,5 +1,22 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+const AUTH_CALLBACK_KEYS = ['code', 'error', 'error_code', 'access_token', 'refresh_token', 'token_hash'];
+
+/** Detect callback intent before Supabase consumes or cleans its URL parameters. */
+export function hasSupabaseAuthCallback(urlText?: string): boolean {
+  if (!urlText && typeof window === 'undefined') return false;
+  try {
+    const url = new URL(urlText || window.location.href);
+    const fragment = url.hash.replace(/^#\/?/, '');
+    const query = new URLSearchParams(url.search);
+    const hashParams = new URLSearchParams(fragment.includes('?') ? fragment.slice(fragment.indexOf('?') + 1) : fragment);
+    return AUTH_CALLBACK_KEYS.some((key) => query.has(key) || hashParams.has(key));
+  } catch { return false; }
+}
+
+// Capture this before createClient's automatic callback processing can clear the URL.
+export const initialSupabaseAuthCallbackPending = hasSupabaseAuthCallback();
+
 export interface SupabaseConfigStatus {
   isConfigured: boolean;
   url: string | null;
@@ -14,7 +31,11 @@ const validUrl = (() => { try { const u = new URL(rawUrl || ''); return u.protoc
 const validKey = !!rawKey?.trim() && !/service_role|secret/i.test(rawKey);
 
 export const supabase: SupabaseClient | null = validUrl && validKey
-  ? createClient(rawUrl!, rawKey!, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } })
+  ? createClient(rawUrl!, rawKey!, {
+      // Supabase exchanges recovery callback codes/tokens and emits PASSWORD_RECOVERY;
+      // application routing must not rewrite the URL before this detection completes.
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+    })
   : null;
 
 export function getSupabaseStatus(): SupabaseConfigStatus {

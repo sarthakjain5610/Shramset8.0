@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Users,
   Building2,
@@ -55,7 +55,9 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate, lang }
 
   // Status
   const [error, setError] = useState<string | null>(null);
+  const [registrationStatus, setRegistrationStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const submitLock = useRef(false);
 
   const passwordScore = useMemo(() => {
     let score = 0;
@@ -67,40 +69,56 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate, lang }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitLock.current || registrationStatus) return;
     setError(null);
 
     if (!fullName.trim()) {
-      setError('Full name is required.');
+      setError(tr('Full name is required.', 'पूरा नाम भरना आवश्यक है।'));
       return;
     }
 
     if (!phone || phone.replace(/\D/g, '').length < 10) {
-      setError('Please provide a valid 10-digit mobile number with country code.');
+      setError(
+        tr(
+          'Please provide a valid 10-digit mobile number with country code.',
+          'कृपया देश कोड सहित 10 अंकों का सही मोबाइल नंबर दर्ज करें।',
+        ),
+      );
       return;
     }
 
-    if (!email.trim() && accountType === 'contractor') {
-      setError('Contractors must provide a work email address for audit correspondence.');
+    if (!email.trim()) {
+      setError(
+        tr(
+          'Email is required for every account because phone sign-in is not enabled.',
+          'हर खाते के लिए ईमेल आवश्यक है, क्योंकि मोबाइल नंबर से साइन इन की सुविधा चालू नहीं है।',
+        ),
+      );
       return;
     }
 
     if (!password || password.length < 6) {
-      setError('Please choose a secure password (minimum 6 characters).');
+      setError(tr('Please choose a secure password (minimum 6 characters).', 'कृपया सुरक्षित पासवर्ड चुनें (कम से कम 6 अक्षर)।'));
       return;
     }
 
     if (!privacyAccepted) {
-      setError('You must accept the WurkUp privacy terms and data use policy.');
+      setError(
+        tr(
+          'You must accept the WurkUp privacy terms and data use policy.',
+          'आपको WurkUp की गोपनीयता शर्तें और डेटा उपयोग नीति स्वीकार करनी होगी।',
+        ),
+      );
       return;
     }
 
+    submitLock.current = true;
     setIsLoading(true);
-
     const params: SignUpParams = {
       role: accountType,
       fullName: fullName.trim(),
       phone: phone.trim(),
-      email: email.trim() || undefined,
+      email: email.trim(),
       password,
       trade: accountType === 'worker' ? trade : undefined,
       organizationName: accountType === 'contractor' ? organizationName.trim() : undefined,
@@ -108,15 +126,37 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate, lang }
       privacyAccepted,
     };
 
-    const res = await auth.signUp(params);
-    setIsLoading(false);
-
-    if (res.success && res.user) {
-      onNavigate(res.user.role === 'worker' ? 'worker' : 'contractor');
-    } else {
+    try {
+      const res = await auth.signUp(params);
+      if (!res.success) {
+        setError(res.error);
+      } else if (res.state === 'authenticated') {
+        onNavigate(res.user.role === 'worker' ? 'worker' : 'contractor');
+      } else if (res.state === 'confirmation_pending') {
+        setRegistrationStatus(
+          tr(
+            `Registration was accepted for ${res.email}. Verify your email using the confirmation link before signing in. Check your spam folder if it does not arrive. Do not register again.`,
+            `आपका पंजीकरण (${res.email}) स्वीकार कर लिया गया है। साइन इन करने से पहले ईमेल में मिले पुष्टि लिंक का उपयोग करें। ईमेल न मिले तो स्पैम फ़ोल्डर देखें। दोबारा पंजीकरण न करें।`,
+          ),
+        );
+      } else {
+        setRegistrationStatus(
+          tr(
+            `Your account registration was accepted for ${res.email}, but profile setup could not yet be confirmed. Do not register again; try signing in later or contact support.`,
+            `आपका पंजीकरण (${res.email}) स्वीकार हुआ है, लेकिन प्रोफ़ाइल बनना अभी सुनिश्चित नहीं हुआ। दोबारा पंजीकरण न करें; बाद में साइन इन करें या सहायता से संपर्क करें।`,
+          ),
+        );
+      }
+    } catch {
       setError(
-        res.error || tr('Failed to create account. Please verify details.', 'खाता नहीं बन सका। कृपया विवरण जाँचें।'),
+        tr(
+          'We could not confirm the registration result. Do not submit repeatedly; try signing in or password recovery, or contact support.',
+          'पंजीकरण की स्थिति की पुष्टि नहीं हो सकी। बार-बार अनुरोध न भेजें; साइन इन या पासवर्ड पुनःप्राप्ति आज़माएँ, या सहायता से संपर्क करें।',
+        ),
       );
+    } finally {
+      setIsLoading(false);
+      submitLock.current = false;
     }
   };
 
@@ -162,7 +202,16 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate, lang }
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      {registrationStatus && (
+        <div role="status" className="mb-5 rounded-xl border border-forest-200 bg-forest-50 p-4 text-sm text-forest-900">
+          <p>{registrationStatus}</p>
+          <button type="button" onClick={() => onNavigate('sign-in')} className="mt-3 font-bold underline underline-offset-2">
+            {tr('Go to sign in', 'साइन इन पर जाएँ')}
+          </button>
+        </div>
+      )}
+
+      {!registrationStatus && <form onSubmit={handleSubmit} className="space-y-5">
         {/* Role selector */}
         <fieldset>
           <legend className="label">{tr('I am registering as', 'मैं पंजीकरण कर रहा/रही हूँ')}</legend>
@@ -278,15 +327,10 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate, lang }
             </p>
           </div>
 
-          {/* Email */}
+          {/* Email — required for every account; phone sign-in is not enabled. */}
           <div>
             <label htmlFor="email" className="label">
-              {tr('Email address', 'ईमेल पता')}{' '}
-              {accountType === 'contractor' ? (
-                <span className="text-rose-500">*</span>
-              ) : (
-                <span className="font-medium text-ink-400">{tr('(optional)', '(वैकल्पिक)')}</span>
-              )}
+              {tr('Email address', 'ईमेल पता')} <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
               <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
@@ -294,7 +338,7 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate, lang }
                 id="email"
                 type="email"
                 autoComplete="email"
-                required={accountType === 'contractor'}
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
@@ -302,15 +346,10 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate, lang }
               />
             </div>
             <p className="mt-1.5 text-[10px] leading-snug text-ink-400">
-              {accountType === 'contractor'
-                ? tr(
-                    'Required for audit correspondence and account recovery.',
-                    'ऑडिट पत्राचार और खाता पुनःप्राप्ति के लिए ज़रूरी।',
-                  )
-                : tr(
-                    'Add one to recover your account without a phone call.',
-                    'जोड़ें, ताकि बिना फ़ोन किए भी खाता वापस मिल सके।',
-                  )}
+              {tr(
+                'Required for account confirmation, sign-in and account recovery. Phone sign-in is not enabled.',
+                'खाता पुष्टि, साइन इन और खाता पुनःप्राप्ति के लिए आवश्यक है। मोबाइल नंबर से साइन इन की सुविधा चालू नहीं है।',
+              )}
             </p>
           </div>
 
@@ -488,7 +527,7 @@ export const CreateAccount: React.FC<CreateAccountProps> = ({ onNavigate, lang }
             {tr('Sign in instead', 'साइन इन करें')}
           </button>
         </p>
-      </form>
+      </form>}
     </AuthLayout>
   );
 };

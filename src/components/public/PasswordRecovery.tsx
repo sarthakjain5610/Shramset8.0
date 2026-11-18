@@ -72,12 +72,12 @@ export const PasswordRecovery: React.FC<PasswordRecoveryProps> = ({ onNavigate, 
         lang === 'hi'
           ? [
               'लॉगआउट करने पर शिफ्ट, मजदूरी और शिकायतें कभी नहीं मिटतीं',
-              'पंजीकृत मोबाइल नंबर से भी साइन इन किया जा सकता है',
+              'साइन इन के लिए पंजीकृत ईमेल पता इस्तेमाल करें; मोबाइल नंबर से साइन इन की सुविधा चालू नहीं है।',
               'ईमेल उपलब्ध न हो तो हमारी हेल्पलाइन आपको व्यक्तिगत रूप से सत्यापित कर सकती है',
             ]
           : [
               'Shifts, wages and grievances are never deleted on sign-out',
-              'Registered phone numbers can also be used to sign in',
+              'Sign-in uses your registered email address; phone sign-in is not enabled',
               'Our helpline can verify you in person if email is unavailable',
             ]
       }
