@@ -34,6 +34,9 @@ export const JudgeDemoTourModal: React.FC<JudgeDemoTourModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'tour' | 'crypto' | 'anomalies' | 'reset'>('tour');
   const modalRef = useModalBehavior(isOpen, onClose);
+  // Bilingual helper: every user-facing string in this component is authored in
+  // both languages, so a Hindi reader never sees an English fragment.
+  const tr = (en: string, hi: string) => (lang === 'hi' ? hi : en);
   
   // Crypto audit state
   const [auditResult, setAuditResult] = useState<AuditVerificationResult | null>(null);
@@ -187,13 +190,16 @@ export const JudgeDemoTourModal: React.FC<JudgeDemoTourModalProps> = ({
                 {lang === 'hi' ? 'जज डेमो टूर एवं सुरक्षा ऑडिट बेंच' : "Judges' Tour & Audit Test Bench"}
               </h2>
               <span className="text-[11px] text-brass-300 font-medium block">
-                WurkUp · Verified Architecture & Anomaly Controls
+                {tr(
+                  'WurkUp · Verified Architecture & Anomaly Controls',
+                  'WurkUp · सत्यापित आर्किटेक्चर और असंगति नियंत्रण',
+                )}
               </span>
             </div>
           </div>
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={tr('Close', 'बंद करें')}
             className="grid h-8 w-8 place-items-center rounded-lg text-sand-200/60 transition-colors hover:bg-white/10 hover:text-white cursor-pointer"
           >
             ✕
@@ -244,46 +250,78 @@ export const JudgeDemoTourModal: React.FC<JudgeDemoTourModalProps> = ({
             <div className="space-y-4">
               <div className="p-4 bg-brass-50 rounded-xl border border-brass-200">
                 <h3 className="font-bold text-brass-900 text-sm mb-1">
-                  Defining Innovation: Absolute Wage Transparency
+                  {tr('Defining Innovation: Absolute Wage Transparency', 'मूल नवाचार: पूर्ण मजदूरी पारदर्शिता')}
                 </h3>
                 <p className="text-brass-900 text-xs leading-relaxed">
-                  Every wage explained, every change traceable, every payment status explicit, and every disagreement visible.
-                  Empowering 450M+ unorganized construction and informal workers against wage theft, arbitrary cuts, and unrecorded overtime.
+                  {tr(
+                    'Every wage explained, every change traceable, every payment status explicit, and every disagreement visible. Empowering 450M+ unorganized construction and informal workers against wage theft, arbitrary cuts, and unrecorded overtime.',
+                    'हर मजदूरी समझाई गई, हर बदलाव का पता लगे, हर भुगतान की स्थिति स्पष्ट, और हर असहमति दिखे। 45 करोड़+ असंगठित निर्माण और अनौपचारिक कामगारों को मजदूरी चोरी, मनमानी कटौती और बिना दर्ज ओवरटाइम के विरुद्ध सशक्त बनाना।',
+                  )}
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3 bg-sand-50 border border-sand-200 rounded-lg space-y-1">
-                  <span className="font-bold text-ink-900 block text-xs">1. Smart Shram Pass</span>
+                  <span className="font-bold text-ink-900 block text-xs">
+                    {tr('1. Smart Shram Pass', '1. स्मार्ट श्रम पास')}
+                  </span>
                   <p className="text-ink-600 text-[11px]">
-                    Dual-sided physical and digital card. QR code contains an <strong>opaque unguessable reference</strong> URL, completely sanitizing Aadhaar and wage balances for privacy.
+                    {tr('Dual-sided physical and digital card. QR code contains an', 'दोनों तरफ़ छपा भौतिक और डिजिटल कार्ड। QR कोड में केवल एक')}{' '}
+                    <strong>{tr('opaque unguessable reference', 'गूढ़, अनुमान-असंभव संदर्भ')}</strong>{' '}
+                    {tr(
+                      'URL, completely sanitizing Aadhaar and wage balances for privacy.',
+                      'URL होता है, जिससे गोपनीयता के लिए आधार और मजदूरी बैलेंस पूरी तरह बाहर रहते हैं।',
+                    )}
                   </p>
                 </div>
 
                 <div className="p-3 bg-sand-50 border border-sand-200 rounded-lg space-y-1">
-                  <span className="font-bold text-ink-900 block text-xs">2. Authoritative Wage Engine</span>
+                  <span className="font-bold text-ink-900 block text-xs">
+                    {tr('2. Authoritative Wage Engine', '2. प्रामाणिक मजदूरी इंजन')}
+                  </span>
                   <p className="text-ink-600 text-[11px]">
-                    Evaluates exact integer paise arithmetic. <strong>₹650 × 4 days = ₹2,600</strong> gross. Recording a ₹1,300 payment leaves ₹1,300 outstanding. Payments never count as earnings.
+                    {tr('Evaluates exact integer paise arithmetic.', 'पूरे पैसे में सटीक गणना करता है।')}{' '}
+                    <strong>₹650 × 4 {tr('days', 'दिन')} = ₹2,600</strong>{' '}
+                    {tr(
+                      'gross. Recording a ₹1,300 payment leaves ₹1,300 outstanding. Payments never count as earnings.',
+                      'सकल। ₹1,300 का भुगतान दर्ज करने पर ₹1,300 बकाया रहता है। भुगतान को कभी कमाई नहीं गिना जाता।',
+                    )}
                   </p>
                 </div>
 
                 <div className="p-3 bg-sand-50 border border-sand-200 rounded-lg space-y-1">
-                  <span className="font-bold text-ink-900 block text-xs">3. SHA-256 Audit Chain</span>
+                  <span className="font-bold text-ink-900 block text-xs">
+                    {tr('3. SHA-256 Audit Chain', '3. SHA-256 ऑडिट चेन')}
+                  </span>
                   <p className="text-ink-600 text-[11px]">
-                    Deterministic canonical serialization with cryptographic predecessor hash pointers. Detects unauthorized in-place record alterations.
+                    {tr(
+                      'Deterministic canonical serialization with cryptographic predecessor hash pointers. Detects unauthorized in-place record alterations.',
+                      'क्रिप्टोग्राफ़िक पूर्ववर्ती हैश पॉइंटर के साथ नियत कैनोनिकल सीरियलाइज़ेशन। रिकॉर्ड में बिना अनुमति किए गए बदलाव पकड़ लेता है।',
+                    )}
                   </p>
                 </div>
 
                 <div className="p-3 bg-sand-50 border border-sand-200 rounded-lg space-y-1">
-                  <span className="font-bold text-ink-900 block text-xs">4. Explainable Anomaly Detection</span>
+                  <span className="font-bold text-ink-900 block text-xs">
+                    {tr('4. Explainable Anomaly Detection', '4. व्याख्या-सहित विसंगति पहचान')}
+                  </span>
                   <p className="text-ink-600 text-[11px]">
-                    Deterministic rules (RULE-01 to RULE-07) with neutral explanations. Ensures 4 days of 8 hours are never conflated as a 32-hour continuous shift.
+                    {tr(
+                      'Deterministic rules (RULE-01 to RULE-07) with neutral explanations. Ensures 4 days of 8 hours are never conflated as a 32-hour continuous shift.',
+                      'तटस्थ व्याख्या के साथ नियत नियम (RULE-01 से RULE-07)। सुनिश्चित करता है कि 8 घंटे के 4 दिन कभी 32 घंटे की लगातार शिफ्ट न समझे जाएँ।',
+                    )}
                   </p>
                 </div>
               </div>
 
               <div className="p-3 bg-sand-100 rounded-lg text-[11px] text-ink-600">
-                <strong>Project Origin:</strong> Senior Bal Vigyan Innovation Exhibit, Indore, Madhya Pradesh. Official Helpline: <strong className="text-ink-900 font-mono">7909348017</strong>.
+                <strong>{tr('Project Origin:', 'परियोजना का स्रोत:')}</strong>{' '}
+                {tr(
+                  'Senior Bal Vigyan Innovation Exhibit, Indore, Madhya Pradesh.',
+                  'सीनियर बाल विज्ञान नवाचार प्रदर्शनी, इंदौर, मध्य प्रदेश।',
+                )}{' '}
+                {tr('Official Helpline:', 'आधिकारिक हेल्पलाइन:')}{' '}
+                <strong className="text-ink-900 font-mono">7909348017</strong>.
               </div>
             </div>
           )}
@@ -293,7 +331,9 @@ export const JudgeDemoTourModal: React.FC<JudgeDemoTourModalProps> = ({
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-sand-50 border border-sand-200 rounded-xl">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-ink-500">Chain Status</span>
+                  <span className="text-[10px] uppercase font-bold text-ink-500">
+                    {tr('Chain Status', 'चेन की स्थिति')}
+                  </span>
                   <h4 className="text-sm font-bold text-ink-900 font-mono">{tamperStatus}</h4>
                 </div>
                 <button
@@ -302,7 +342,7 @@ export const JudgeDemoTourModal: React.FC<JudgeDemoTourModalProps> = ({
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-brass-600 hover:bg-brass-500 text-white rounded-lg font-semibold text-xs cursor-pointer"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isVerifying ? 'animate-spin' : ''}`} />
-                  <span>Verify Audit Chain</span>
+                  <span>{tr('Verify Audit Chain', 'ऑडिट चेन जाँचें')}</span>
                 </button>
               </div>
 
@@ -327,36 +367,48 @@ export const JudgeDemoTourModal: React.FC<JudgeDemoTourModalProps> = ({
 
               {/* Attack Scenarios */}
               <div className="space-y-2 pt-2 border-t border-sand-200">
-                <span className="font-bold text-ink-800 text-xs block">Simulated Attack Scenarios for Evaluation:</span>
+                <span className="font-bold text-ink-800 text-xs block">
+                  {tr('Simulated Attack Scenarios for Evaluation:', 'मूल्यांकन के लिए नकली हमले के परिदृश्य:')}
+                </span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <button
                     onClick={handleTamperRecord}
                     className="p-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-900 rounded-lg font-medium text-left cursor-pointer transition-colors"
                   >
-                    <span className="block font-bold">1. Tamper Record</span>
-                    <span className="text-[10px] text-rose-700 block">Simulate unauthorized payload edit</span>
+                    <span className="block font-bold">{tr('1. Tamper Record', '1. रिकॉर्ड से छेड़छाड़')}</span>
+                    <span className="text-[10px] text-rose-700 block">
+                      {tr('Simulate unauthorized payload edit', 'बिना अनुमति डेटा बदलने का अनुकरण')}
+                    </span>
                   </button>
 
                   <button
                     onClick={handleBreakLinkage}
                     className="p-2.5 bg-brass-50 hover:bg-brass-100 border border-brass-200 text-brass-900 rounded-lg font-medium text-left cursor-pointer transition-colors"
                   >
-                    <span className="block font-bold">2. Break Linkage</span>
-                    <span className="text-[10px] text-brass-700 block">Corrupt predecessor hash</span>
+                    <span className="block font-bold">{tr('2. Break Linkage', '2. कड़ी तोड़ें')}</span>
+                    <span className="text-[10px] text-brass-700 block">
+                      {tr('Corrupt predecessor hash', 'पूर्ववर्ती हैश बिगाड़ें')}
+                    </span>
                   </button>
 
                   <button
                     onClick={handleRestoreBaseline}
                     className="p-2.5 bg-forest-50 hover:bg-forest-100 border border-forest-200 text-forest-900 rounded-lg font-medium text-left cursor-pointer transition-colors"
                   >
-                    <span className="block font-bold">3. Restore Baseline</span>
-                    <span className="text-[10px] text-forest-700 block">Reset valid genesis hash chain</span>
+                    <span className="block font-bold">{tr('3. Restore Baseline', '3. आधार स्थिति बहाल करें')}</span>
+                    <span className="text-[10px] text-forest-700 block">
+                      {tr('Reset valid genesis hash chain', 'वैध जेनेसिस हैश चेन रीसेट करें')}
+                    </span>
                   </button>
                 </div>
               </div>
 
               <div className="text-[11px] text-ink-500 bg-sand-50 p-2.5 rounded border border-sand-200">
-                <strong>Cryptographic Notice:</strong> Standard Web Crypto SHA-256 digests verify data integrity within the platform's verifiable event log. A locally held hash chain cannot protect against an adversary with root write access to the host device without remote timestamping.
+                <strong>{tr('Cryptographic Notice:', 'क्रिप्टोग्राफ़िक सूचना:')}</strong>{' '}
+                {tr(
+                  "Standard Web Crypto SHA-256 digests verify data integrity within the platform's verifiable event log. A locally held hash chain cannot protect against an adversary with root write access to the host device without remote timestamping.",
+                  'मानक Web Crypto SHA-256 डाइजेस्ट प्लेटफ़ॉर्म के सत्यापन-योग्य इवेंट लॉग में डेटा की अखंडता जाँचते हैं। स्थानीय रखी हैश चेन उस हमलावर से नहीं बचा सकती जिसके पास होस्ट डिवाइस पर रूट लेखन पहुँच हो और रिमोट टाइमस्टैम्पिंग न हो।',
+                )}
               </div>
             </div>
           )}
@@ -365,13 +417,20 @@ export const JudgeDemoTourModal: React.FC<JudgeDemoTourModalProps> = ({
           {activeTab === 'anomalies' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between border-b border-sand-200 pb-2">
-                <span className="font-bold text-ink-800 text-xs">Deterministic Rule Findings (RULE-01 to RULE-07)</span>
-                <span className="text-[11px] text-ink-500 font-mono">{anomalies.length} active notifications</span>
+                <span className="font-bold text-ink-800 text-xs">
+                  {tr('Deterministic Rule Findings (RULE-01 to RULE-07)', 'नियत नियम निष्कर्ष (RULE-01 से RULE-07)')}
+                </span>
+                <span className="text-[11px] text-ink-500 font-mono">
+                  {tr(`${anomalies.length} active notifications`, `${anomalies.length} सक्रिय सूचनाएँ`)}
+                </span>
               </div>
 
               {anomalies.length === 0 ? (
                 <div className="p-4 bg-forest-50 text-forest-800 rounded-xl border border-forest-200 text-center">
-                  No anomalies detected. All work records, payment totals, and shifts meet configured thresholds.
+                  {tr(
+                    'No anomalies detected. All work records, payment totals, and shifts meet configured thresholds.',
+                    'कोई विसंगति नहीं मिली। सभी कार्य रिकॉर्ड, भुगतान कुल और शिफ्ट तय सीमाओं के भीतर हैं।',
+                  )}
                 </div>
               ) : (
                 anomalies.map((alert, idx) => (
@@ -389,14 +448,18 @@ export const JudgeDemoTourModal: React.FC<JudgeDemoTourModalProps> = ({
                     </div>
                     <p className="text-ink-700 text-[11px]">{alert.explanation}</p>
                     <p className="text-ink-500 text-[10px] italic">
-                      <strong>Suggested Action:</strong> {alert.suggestedAction}
+                      <strong>{tr('Suggested Action:', 'सुझाया कदम:')}</strong> {alert.suggestedAction}
                     </p>
                   </div>
                 ))
               )}
 
               <div className="p-3 bg-sand-100 rounded text-[11px] text-ink-600">
-                <strong>RULE-02 Safety Check:</strong> Individual 8-hour days are verified independently; four days of 8 hours are never aggregated as a continuous 32-hour shift.
+                <strong>{tr('RULE-02 Safety Check:', 'RULE-02 सुरक्षा जाँच:')}</strong>{' '}
+                {tr(
+                  'Individual 8-hour days are verified independently; four days of 8 hours are never aggregated as a continuous 32-hour shift.',
+                  'हर 8 घंटे का दिन अलग से जाँचा जाता है; 8 घंटे के चार दिनों को कभी 32 घंटे की लगातार शिफ्ट नहीं जोड़ा जाता।',
+                )}
               </div>
             </div>
           )}
@@ -407,10 +470,13 @@ export const JudgeDemoTourModal: React.FC<JudgeDemoTourModalProps> = ({
               <div className="p-4 bg-brass-50 rounded-xl border border-brass-200 text-brass-950 space-y-2">
                 <div className="flex items-center gap-2 font-bold text-xs">
                   <AlertTriangle className="w-4 h-4 text-brass-600" />
-                  <span>Safe Reset & Demonstration Isolation</span>
+                  <span>{tr('Safe Reset & Demonstration Isolation', 'सुरक्षित रीसेट और डेमो अलगाव')}</span>
                 </div>
                 <p className="text-[11px] text-brass-900">
-                  To protect real records, WurkUp isolates demonstration data. You can choose whether to reset only the sample seed data or perform a complete factory wipe.
+                  {tr(
+                    'To protect real records, WurkUp isolates demonstration data. You can choose whether to reset only the sample seed data or perform a complete factory wipe.',
+                    'असली रिकॉर्ड की सुरक्षा के लिए WurkUp डेमो डेटा अलग रखता है। आप चुन सकते हैं कि सिर्फ़ नमूना डेटा रीसेट हो या पूरा फ़ैक्टरी रीसेट हो।',
+                  )}
                 </p>
 
                 <div className="space-y-1.5 pt-1">
@@ -423,7 +489,10 @@ export const JudgeDemoTourModal: React.FC<JudgeDemoTourModalProps> = ({
                       onChange={() => setResetMode('demo_only')}
                       className="text-brass-600"
                     />
-                    <span><strong>Reset Demo Data Only (Recommended):</strong> Preserves newly registered real workers.</span>
+                    <span>
+                      <strong>{tr('Reset Demo Data Only (Recommended):', 'सिर्फ़ डेमो डेटा रीसेट करें (सुझाया गया):')}</strong>{' '}
+                      {tr('Preserves newly registered real workers.', 'नए पंजीकृत असली कामगार सुरक्षित रहते हैं।')}
+                    </span>
                   </label>
 
                   <label className="flex items-center gap-2 cursor-pointer text-xs">
@@ -435,7 +504,13 @@ export const JudgeDemoTourModal: React.FC<JudgeDemoTourModalProps> = ({
                       onChange={() => setResetMode('factory')}
                       className="text-brass-600"
                     />
-                    <span><strong>Factory Reset:</strong> Wipes all local records back to initial Bal Vigyan Indore prototype state.</span>
+                    <span>
+                      <strong>{tr('Factory Reset:', 'फ़ैक्टरी रीसेट:')}</strong>{' '}
+                      {tr(
+                        'Wipes all local records back to initial Bal Vigyan Indore prototype state.',
+                        'सभी स्थानीय रिकॉर्ड मिटाकर बाल विज्ञान इंदौर प्रोटोटाइप की शुरुआती स्थिति पर ले जाता है।',
+                      )}
+                    </span>
                   </label>
                 </div>
 
@@ -444,19 +519,28 @@ export const JudgeDemoTourModal: React.FC<JudgeDemoTourModalProps> = ({
                     onClick={handleExecuteReset}
                     className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-bold text-xs cursor-pointer shadow-sm"
                   >
-                    {resetConfirmed ? 'Resetting...' : 'Confirm and Execute Reset'}
+                    {resetConfirmed
+                      ? tr('Resetting...', 'रीसेट हो रहा है...')
+                      : tr('Confirm and Execute Reset', 'पुष्टि करें और रीसेट चलाएँ')}
                   </button>
                   {resetConfirmed && (
-                    <span className="text-forest-700 ml-2 font-semibold">✓ Reset completed!</span>
+                    <span className="text-forest-700 ml-2 font-semibold">
+                      {tr('✓ Reset completed!', '✓ रीसेट पूरा हुआ!')}
+                    </span>
                   )}
                 </div>
               </div>
 
               {/* Versioned Backup Export / Restore */}
               <div className="p-4 bg-sand-50 rounded-xl border border-sand-200 space-y-3">
-                <span className="font-bold text-ink-900 text-xs block">Versioned Data Backup & Restore (JSON Interchange)</span>
+                <span className="font-bold text-ink-900 text-xs block">
+                  {tr('Versioned Data Backup & Restore (JSON Interchange)', 'संस्करण-सहित डेटा बैकअप और बहाली (JSON आदान-प्रदान)')}
+                </span>
                 <p className="text-ink-600 text-[11px]">
-                  Export all current workers, verified muster attendance, wage ledger records, and audit events into a portable schema v2.0 JSON file.
+                  {tr(
+                    'Export all current workers, verified muster attendance, wage ledger records, and audit events into a portable schema v2.0 JSON file.',
+                    'सभी वर्तमान कामगार, सत्यापित हाजिरी, मजदूरी बही प्रविष्टियाँ और ऑडिट इवेंट एक पोर्टेबल स्कीमा v2.0 JSON फ़ाइल में निर्यात करें।',
+                  )}
                 </p>
 
                 <div className="flex flex-wrap items-center gap-3">
@@ -465,12 +549,12 @@ export const JudgeDemoTourModal: React.FC<JudgeDemoTourModalProps> = ({
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-ink-900 hover:bg-ink-800 text-white rounded-lg text-xs font-semibold cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>Export JSON Backup</span>
+                    <span>{tr('Export JSON Backup', 'JSON बैकअप निर्यात करें')}</span>
                   </button>
 
                   <label className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-ink-300 hover:bg-sand-100 text-ink-700 rounded-lg text-xs font-semibold cursor-pointer">
                     <Upload className="w-3.5 h-3.5" />
-                    <span>Restore from JSON File</span>
+                    <span>{tr('Restore from JSON File', 'JSON फ़ाइल से बहाल करें')}</span>
                     <input
                       type="file"
                       accept=".json"
@@ -495,7 +579,7 @@ export const JudgeDemoTourModal: React.FC<JudgeDemoTourModalProps> = ({
             onClick={onClose}
             className="px-4 py-1.5 bg-ink-900 hover:bg-ink-800 text-white text-xs font-semibold rounded-lg cursor-pointer"
           >
-            Close
+            {tr('Close', 'बंद करें')}
           </button>
         </div>
 

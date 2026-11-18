@@ -33,7 +33,7 @@ import { evaluateAnomalies } from '../../services/anomalyEngine';
 import { calculateRecordBreakdown } from '../../services/wageEngine';
 import { ContactVerificationModal } from '../ContactVerificationModal';
 import jsQR from 'jsqr';
-import { ContractorCloudWorkspace } from './ContractorCloudWorkspace';
+import { ContractorDashboard as CloudContractorDashboard } from '../dashboard/contractor/ContractorDashboard';
 
 interface ContractorDashboardProps {
   user: UserProfile;
@@ -448,7 +448,7 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
               <select
                 value={selectedSiteId}
                 onChange={(e) => setSelectedSiteId(e.target.value)}
-                aria-label="Active construction site"
+                aria-label={bi(lang, 'Active construction site', 'सक्रिय निर्माण साइट')}
                 className="max-w-[11rem] cursor-pointer truncate rounded-full border-0 bg-transparent py-1 pr-1 text-[11px] font-bold text-white focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-300 [&>option]:text-ink-900"
               >
                 {sites.map((s) => (
@@ -619,11 +619,21 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
             <div className="bg-sand-50 rounded-2xl border border-brass-200 p-5 space-y-2 text-xs">
               <div className="flex items-center gap-2 font-bold text-ink-900">
                 <ShieldCheck className="w-4 h-4 text-forest-700" />
-                <span>Statutory Compliance Status</span>
+                <span>{bi(lang, 'Statutory Compliance Status', 'वैधानिक अनुपालन स्थिति')}</span>
               </div>
               <p className="text-ink-600 leading-relaxed">
-                Site: <span className="font-semibold text-ink-800">{activeSite?.name || 'Indore Civil Construction Project'}</span><br />
-                Muster roll entries and disbursements conform to the <strong>MP Minimum Wages Act (1948)</strong>. Shift records are secured through chained SHA-256 cryptographic events.
+                {bi(lang, 'Site:', 'साइट:')}{' '}
+                <span className="font-semibold text-ink-800">
+                  {activeSite?.name || bi(lang, 'Indore Civil Construction Project', 'इंदौर सिविल निर्माण परियोजना')}
+                </span>
+                <br />
+                {bi(lang, 'Muster roll entries and disbursements conform to the ', 'हाजिरी प्रविष्टियाँ और भुगतान ')}
+                <strong>{bi(lang, 'MP Minimum Wages Act (1948)', 'एमपी न्यूनतम मजदूरी अधिनियम (1948)')}</strong>
+                {bi(
+                  lang,
+                  '. Shift records are secured through chained SHA-256 cryptographic events.',
+                  ' के अनुरूप हैं। शिफ्ट रिकॉर्ड श्रृंखलाबद्ध SHA-256 क्रिप्टोग्राफ़िक इवेंट से सुरक्षित हैं।',
+                )}
               </p>
             </div>
           </div>
@@ -635,8 +645,12 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-ink-900">Authorized Workforce Roster</h2>
-              <p className="text-xs text-ink-500">Only authorized workers assigned to your site are accessible</p>
+              <h2 className="text-base font-bold text-ink-900">
+                {bi(lang, 'Authorized Workforce Roster', 'अधिकृत कामगार सूची')}
+              </h2>
+              <p className="text-xs text-ink-500">
+                {bi(lang, 'Only authorized workers assigned to your site are accessible', 'सिर्फ़ आपकी साइट पर नियुक्त अधिकृत कामगार ही दिखते हैं')}
+              </p>
             </div>
             <button
               onClick={() => setShowAddWorkerModal(true)}
@@ -652,12 +666,12 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
               <table className="w-full text-left text-xs">
                 <thead className="bg-sand-50 border-b border-sand-200 text-ink-600 font-semibold">
                   <tr>
-                    <th className="py-3 px-4">Worker Name</th>
-                    <th className="py-3 px-4">Trade</th>
-                    <th className="py-3 px-4">Mobile Number</th>
-                    <th className="py-3 px-4">Base Daily Wage</th>
-                    <th className="py-3 px-4">Contact Status</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
+                    <th className="py-3 px-4">{bi(lang, 'Worker Name', 'कामगार का नाम')}</th>
+                    <th className="py-3 px-4">{bi(lang, 'Trade', 'पेशा')}</th>
+                    <th className="py-3 px-4">{bi(lang, 'Mobile Number', 'मोबाइल नंबर')}</th>
+                    <th className="py-3 px-4">{bi(lang, 'Base Daily Wage', 'आधार दैनिक मजदूरी')}</th>
+                    <th className="py-3 px-4">{bi(lang, 'Contact Status', 'संपर्क स्थिति')}</th>
+                    <th className="py-3 px-4 text-right">{bi(lang, 'Actions', 'कार्रवाई')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sand-100">
@@ -711,7 +725,13 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
             {punchSuccess && (
               <div className="mb-4 p-3 bg-forest-50 border border-forest-200 rounded-xl flex items-center gap-2 text-xs text-forest-800">
                 <CheckCircle2 className="w-4 h-4 text-forest-600 shrink-0" />
-                <span>Attendance punch successfully verified and recorded into cryptographic audit chain!</span>
+                <span>
+                  {bi(
+                    lang,
+                    'Attendance punch successfully verified and recorded into cryptographic audit chain!',
+                    'हाजिरी सफलतापूर्वक सत्यापित होकर क्रिप्टोग्राफ़िक ऑडिट चेन में दर्ज हो गई!',
+                  )}
+                </span>
               </div>
             )}
 
@@ -752,10 +772,12 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
                   onChange={(e) => setPunchShiftType(e.target.value as any)}
                   className="w-full p-2 border border-ink-300 rounded-lg bg-white"
                 >
-                  <option value="full_day">Full Day (8 hrs)</option>
-                  <option value="half_day">Half Day (4 hrs)</option>
-                  <option value="overtime_2h">Full Day + 2h OT</option>
-                  <option value="overtime_4h">Full Day + 4h Night OT</option>
+                  <option value="full_day">{bi(lang, 'Full Day (8 hrs)', 'पूरा दिन (8 घंटे)')}</option>
+                  <option value="half_day">{bi(lang, 'Half Day (4 hrs)', 'आधा दिन (4 घंटे)')}</option>
+                  <option value="overtime_2h">{bi(lang, 'Full Day + 2h OT', 'पूरा दिन + 2 घंटे ओवरटाइम')}</option>
+                  <option value="overtime_4h">
+                    {bi(lang, 'Full Day + 4h Night OT', 'पूरा दिन + 4 घंटे रात का ओवरटाइम')}
+                  </option>
                 </select>
               </div>
 
@@ -827,7 +849,13 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
             {paySuccess && (
               <div className="mb-4 p-3 bg-forest-50 border border-forest-200 rounded-xl flex items-center gap-2 text-xs text-forest-800">
                 <CheckCircle2 className="w-4 h-4 text-forest-600 shrink-0" />
-                <span>Payment successfully recorded as contractor deduction. Awaiting worker acknowledgment.</span>
+                <span>
+                  {bi(
+                    lang,
+                    'Payment successfully recorded as contractor deduction. Awaiting worker acknowledgment.',
+                    'भुगतान ठेकेदार की ओर से दर्ज हो गया। कामगार की पावती का इंतज़ार है।',
+                  )}
+                </span>
               </div>
             )}
 
@@ -878,9 +906,9 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
                   onChange={(e) => setPayMode(e.target.value as any)}
                   className="w-full p-2 border border-ink-300 rounded-lg bg-white"
                 >
-                  <option value="bank_transfer">Bank Transfer (NEFT/IMPS)</option>
-                  <option value="upi">UPI / QR Payment</option>
-                  <option value="cash">Direct Cash Handover</option>
+                  <option value="bank_transfer">{bi(lang, 'Bank Transfer (NEFT/IMPS)', 'बैंक ट्रांसफ़र (NEFT/IMPS)')}</option>
+                  <option value="upi">{bi(lang, 'UPI / QR Payment', 'UPI / QR भुगतान')}</option>
+                  <option value="cash">{bi(lang, 'Direct Cash Handover', 'सीधे नकद भुगतान')}</option>
                 </select>
               </div>
 
@@ -956,9 +984,15 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
               <div className="w-12 h-12 rounded-2xl bg-forest-100 text-forest-800 flex items-center justify-center mx-auto mb-2">
                 <Camera className="w-6 h-6" />
               </div>
-              <h2 className="text-lg font-bold text-ink-900">Scan Worker QR Pass</h2>
+              <h2 className="text-lg font-bold text-ink-900">
+                {bi(lang, 'Scan Worker QR Pass', 'कामगार का QR पास स्कैन करें')}
+              </h2>
               <p className="text-xs text-ink-500 mt-0.5">
-                Scan with your phone camera or enter the opaque worker reference below
+                {bi(
+                  lang,
+                  'Scan with your phone camera or enter the opaque worker reference below',
+                  'फ़ोन कैमरे से स्कैन करें या नीचे कामगार का गूढ़ संदर्भ भरें',
+                )}
               </p>
             </div>
 
@@ -973,12 +1007,14 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
               {!cameraActive && (
                 <div className="p-4 text-center space-y-2">
                   <Camera className="w-8 h-8 text-ink-600 mx-auto" />
-                  <span className="text-xs text-ink-400 block">Camera is currently inactive</span>
+                  <span className="text-xs text-ink-400 block">
+                    {bi(lang, 'Camera is currently inactive', 'कैमरा अभी बंद है')}
+                  </span>
                   <button
                     onClick={startCamera}
                     className="px-4 py-2 bg-forest-800 hover:bg-forest-700 text-white rounded-xl text-xs font-semibold cursor-pointer"
                   >
-                    Start Camera
+                    {bi(lang, 'Start Camera', 'कैमरा शुरू करें')}
                   </button>
                 </div>
               )}
@@ -1011,7 +1047,7 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
                   type="text"
                   value={workerLookupToken}
                   onChange={(e) => setWorkerLookupToken(e.target.value)}
-                  placeholder="e.g., WKR-MP-001 or opaque token"
+                  placeholder={bi(lang, 'e.g., WKR-MP-001 or opaque token', 'जैसे WKR-MP-001 या गूढ़ टोकन')}
                   className="flex-1 p-2.5 text-xs border border-ink-300 rounded-xl font-mono"
                 />
                 <button
@@ -1065,7 +1101,13 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
             {reqSuccess && (
               <div className="mb-4 p-3 bg-forest-50 border border-forest-200 rounded-xl flex items-center gap-2 text-xs text-forest-800">
                 <CheckCircle2 className="w-4 h-4 text-forest-600 shrink-0" />
-                <span>Request dispatched! The worker can now review and approve it from their own account.</span>
+                <span>
+                  {bi(
+                    lang,
+                    'Request dispatched! The worker can now review and approve it from their own account.',
+                    'अनुरोध भेज दिया गया! कामगार अब अपने खाते से इसे देखकर स्वीकृत कर सकता है।',
+                  )}
+                </span>
               </div>
             )}
 
@@ -1177,13 +1219,17 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
       {activeTab === 'disputes' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-ink-900">Worker Grievances & Responses</h2>
-            <span className="text-xs text-ink-500 font-mono">{grievances.length} Active Disputes</span>
+            <h2 className="text-base font-bold text-ink-900">
+              {bi(lang, 'Worker Grievances & Responses', 'कामगार शिकायतें और उत्तर')}
+            </h2>
+            <span className="text-xs text-ink-500 font-mono">
+              {bi(lang, `${grievances.length} Active Disputes`, `${grievances.length} सक्रिय विवाद`)}
+            </span>
           </div>
 
           {grievances.length === 0 ? (
             <div className="bg-white rounded-2xl border border-sand-200 p-8 text-center text-xs text-ink-500">
-              No disputes have been filed by workers on your sites.
+              {bi(lang, 'No disputes have been filed by workers on your sites.', 'आपकी साइटों के कामगारों ने अभी कोई विवाद दर्ज नहीं किया।')}
             </div>
           ) : (
             <div className="space-y-4">
@@ -1193,7 +1239,7 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-ink-900 text-sm capitalize">{g.disputeType.replace('_', ' ')}</span>
-                        <span className="font-mono text-[10px] text-ink-500">Ref: {g.dloFilingRef}</span>
+                        <span className="font-mono text-[10px] text-ink-500">WURK UP ref: {g.dloFilingRef}</span>
                       </div>
                       <p className="text-ink-500 mt-0.5">Worker: <span className="font-semibold text-ink-800">{g.workerName}</span> ({g.workerPhone})</p>
                     </div>
@@ -1227,7 +1273,11 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
                             rows={3}
                             value={contractorResponseText}
                             onChange={(e) => setContractorResponseText(e.target.value)}
-                            placeholder="Provide clarification, bank transaction UTR, or agreed revised terms..."
+                            placeholder={bi(
+                              lang,
+                              'Provide clarification, bank transaction UTR, or agreed revised terms...',
+                              'स्पष्टीकरण, बैंक लेन-देन UTR, या तय किए गए नए शर्तें लिखें...',
+                            )}
                             className="w-full p-2 border border-ink-300 rounded-lg"
                           />
                           <div className="flex justify-end gap-2">
@@ -1271,8 +1321,16 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
           <div className="bg-white rounded-2xl border border-sand-200 p-5 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-base font-bold text-ink-900">Cryptographic Verification & Statutory Audit</h3>
-                <p className="text-xs text-ink-500">Run SHA-256 chain verification and deterministic anomaly detection</p>
+                <h3 className="text-base font-bold text-ink-900">
+                  {bi(lang, 'Cryptographic Verification & Statutory Audit', 'क्रिप्टोग्राफ़िक सत्यापन और वैधानिक ऑडिट')}
+                </h3>
+                <p className="text-xs text-ink-500">
+                  {bi(
+                    lang,
+                    'Run SHA-256 chain verification and deterministic anomaly detection',
+                    'SHA-256 चेन सत्यापन और नियत विसंगति पहचान चलाएँ',
+                  )}
+                </p>
               </div>
 
               <button
@@ -1295,10 +1353,14 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
             <div className="p-4 bg-forest-50 border border-forest-200 rounded-xl space-y-1 text-xs text-forest-950">
               <div className="flex items-center gap-1.5 font-bold">
                 <ShieldCheck className="w-4 h-4 text-forest-700" />
-                <span>Cryptographic Chain Status: INTEGRITY_PASSED</span>
+                <span>{bi(lang, 'Cryptographic Chain Status: INTEGRITY_PASSED', 'क्रिप्टोग्राफ़िक चेन स्थिति: INTEGRITY_PASSED')}</span>
               </div>
               <p className="text-forest-800">
-                All muster records and wage ledger entries are bound to valid preceding SHA-256 event hashes.
+                {bi(
+                  lang,
+                  'All muster records and wage ledger entries are bound to valid preceding SHA-256 event hashes.',
+                  'सभी हाजिरी रिकॉर्ड और मजदूरी बही प्रविष्टियाँ वैध पूर्ववर्ती SHA-256 इवेंट हैश से बंधी हैं।',
+                )}
               </p>
             </div>
           </div>
@@ -1309,11 +1371,13 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
       {activeTab === 'profile' && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl border border-sand-200 p-6 shadow-xs space-y-4 text-xs">
-            <h2 className="text-base font-bold text-ink-900">Contractor Profile & Contact Details</h2>
+            <h2 className="text-base font-bold text-ink-900">
+              {bi(lang, 'Contractor Profile & Contact Details', 'ठेकेदार प्रोफ़ाइल और संपर्क विवरण')}
+            </h2>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="p-3.5 bg-sand-50 rounded-xl border border-sand-200">
-                <span className="text-ink-500 block mb-1">Organization Name:</span>
+                <span className="text-ink-500 block mb-1">{bi(lang, 'Organization Name:', 'संस्था का नाम:')}</span>
                 <span className="font-semibold text-ink-900 text-sm">{user.organizationName || 'Civil Contractor'}</span>
               </div>
 
@@ -1355,15 +1419,23 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
       {showAddWorkerModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-900/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl max-w-md w-full border border-sand-200 p-6 shadow-xl space-y-4">
-            <h3 className="text-base font-bold text-ink-900">Assign Worker to Site</h3>
-            <p className="text-xs text-ink-500">Enter the worker's reference ID (e.g. WKR-MP-001) or opaque QR pass token.</p>
+            <h3 className="text-base font-bold text-ink-900">
+              {bi(lang, 'Assign Worker to Site', 'कामगार को साइट पर जोड़ें')}
+            </h3>
+            <p className="text-xs text-ink-500">
+              {bi(
+                lang,
+                "Enter the worker's reference ID (e.g. WKR-MP-001) or opaque QR pass token.",
+                'कामगार की संदर्भ आईडी (जैसे WKR-MP-001) या गूढ़ QR पास टोकन भरें।',
+              )}
+            </p>
 
             <div className="space-y-3">
               <input
                 type="text"
                 value={workerLookupToken}
                 onChange={(e) => setWorkerLookupToken(e.target.value)}
-                placeholder="Enter worker reference..."
+                placeholder={bi(lang, 'Enter worker reference...', 'कामगार संदर्भ भरें...')}
                 className="w-full p-2.5 text-xs border border-ink-300 rounded-xl font-mono"
               />
 
@@ -1411,4 +1483,4 @@ const DemoContractorDashboard: React.FC<ContractorDashboardProps> = ({ user, lan
 /** Keep synthetic IndexedDB workflows isolated from real authenticated contractors. */
 export const ContractorDashboard: React.FC<ContractorDashboardProps> = (props) => props.user.isJudgeDemo
   ? <DemoContractorDashboard {...props} />
-  : <ContractorCloudWorkspace user={props.user} />;
+  : <CloudContractorDashboard user={props.user} lang={props.lang} />;

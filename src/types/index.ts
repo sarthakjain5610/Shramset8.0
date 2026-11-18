@@ -177,6 +177,7 @@ export interface DisputeGrievance {
   description: string; // Worker's statement
   contractorResponse?: string; // Preserved contractor statement
   contractorResponseDate?: string;
+  /** Internal WURK UP submission reference (stored in the legacy dlo_filing_ref column). */
   dloFilingRef: string;
   evidenceMusterCount: number;
   isDemoRecord?: boolean;

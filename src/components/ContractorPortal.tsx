@@ -212,7 +212,7 @@ export const ContractorPortal: React.FC<ContractorPortalProps> = ({
         <div className="lg:col-span-5 relative rounded-2xl overflow-hidden border border-ink-300 shadow-sm bg-ink-900 min-w-0">
           <img
             src="/assets/images/construction_site_muster_1792385014214.jpg"
-            alt="Site muster verification in Madhya Pradesh"
+            alt={lang === 'hi' ? 'मध्य प्रदेश में साइट मस्टर सत्यापन' : 'Site muster verification in Madhya Pradesh'}
             className="w-full h-full min-h-[220px] object-cover object-center"
             referrerPolicy="no-referrer"
             onError={(e) => {

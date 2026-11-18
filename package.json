@@ -10,13 +10,19 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "test": "tsx scripts/run-all-tests.ts",
+    "test:dashboard": "tsx scripts/dashboard-test.tsx",
     "test:render": "tsx scripts/smoke-render.ts",
     "test:ui": "tsx scripts/flow-test.ts",
-    "test:all": "tsc --noEmit && tsx scripts/run-all-tests.ts && tsx scripts/auth-registration-test.ts && tsx scripts/smoke-render.ts && tsx scripts/flow-test.ts",
-    "test:auth": "tsx scripts/auth-registration-test.ts",
+    "test:all": "tsc --noEmit && tsx scripts/run-all-tests.ts && tsx scripts/auth-registration-test.ts && tsx scripts/dashboard-test.tsx && tsx scripts/rls-contract-test.ts && tsx scripts/i18n-audit.ts --strict && tsx scripts/smoke-render.ts && tsx scripts/flow-test.ts",
     "build:offline": "tsx scripts/build-offline.ts",
     "test:offline": "tsx scripts/offline-smoke.ts",
-    "test:service-worker": "node scripts/service-worker-preview-smoke.mjs"
+    "test:service-worker": "node scripts/service-worker-preview-smoke.mjs",
+    "test:i18n": "tsx scripts/i18n-audit.ts",
+    "test:i18n:strict": "tsx scripts/i18n-audit.ts --strict",
+    "test:rls": "tsx scripts/rls-contract-test.ts",
+    "test:rls:live": "psql \"$SUPABASE_DB_URL\" -f supabase/tests/rls_permissions.sql",
+    "test:browser": "node scripts/browser-verify.mjs",
+    "test:auth": "tsx scripts/auth-registration-test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

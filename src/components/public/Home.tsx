@@ -41,10 +41,13 @@ interface HomeProps {
   onEnterJudgeDemo: () => void;
 }
 
+/** Bilingual helper shared by the landing page and its sub-components. */
+const tr = (lang: Language, en: string, hi: string) => (lang === 'hi' ? hi : en);
+
 /* ------------------------------------------------------------------------- */
 /* Hero pass preview — stylised, non-scannable sample credential              */
 /* ------------------------------------------------------------------------- */
-const PassPreview: React.FC = () => (
+const PassPreview: React.FC<{ lang: Language }> = ({ lang }) => (
   <div className="relative mx-auto w-full max-w-[24rem]">
     {/* halo */}
     <div
@@ -71,7 +74,7 @@ const PassPreview: React.FC = () => (
               <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-brass-300/90">
                 Govt. of Madhya Pradesh
               </p>
-              <p className="text-[11px] font-bold text-white">Smart Shram Pass</p>
+              <p className="text-[11px] font-bold text-white">{tr(lang, 'Smart Shram Pass', 'स्मार्ट श्रम पास')}</p>
             </div>
           </div>
           <span className="inline-flex items-center gap-1 rounded-full bg-forest-400/20 px-2 py-0.5 text-[8.5px] font-bold uppercase tracking-wider text-forest-200 ring-1 ring-inset ring-forest-400/30">
@@ -94,7 +97,7 @@ const PassPreview: React.FC = () => (
           </div>
           <div className="min-w-0">
             <p className="truncate text-[13px] font-bold leading-tight">Rajesh Kumar Ahirwar</p>
-            <p className="mt-0.5 text-[10px] text-forest-200/80">Head Mason · Skilled</p>
+            <p className="mt-0.5 text-[10px] text-forest-200/80">{tr(lang, 'Head Mason · Skilled', 'मुख्य राजमिस्त्री · कुशल')}</p>
             <p className="mt-1 font-mono text-[9.5px] tracking-wide text-brass-300/80">
               WKR-IND-•••• 4821
             </p>
@@ -119,7 +122,7 @@ const PassPreview: React.FC = () => (
               Shift approved today
             </p>
             <p className="mt-1 text-[9px] leading-snug text-ink-400">
-              Zero personal data in the code — reference only.
+              {tr(lang, 'Zero personal data in the code — reference only.', 'कोड में कोई व्यक्तिगत डेटा नहीं — केवल संदर्भ।')}
             </p>
           </div>
         </div>
@@ -143,7 +146,7 @@ const PassPreview: React.FC = () => (
         </span>
         <div className="leading-tight">
           <p className="text-[9px] font-bold uppercase tracking-wider text-ink-400">Geofence</p>
-          <p className="text-[10.5px] font-bold text-ink-900">Site verified · 42 m</p>
+          <p className="text-[10.5px] font-bold text-ink-900">{tr(lang, 'Site verified · 42 m', 'साइट सत्यापित · 42 मी')}</p>
         </div>
       </div>
     </div>
@@ -356,7 +359,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
 
           {/* Pass preview */}
           <Reveal direction="scale" delay={200} className="relative">
-            <PassPreview />
+            <PassPreview lang={lang} />
           </Reveal>
         </div>
       </section>
@@ -418,7 +421,11 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
               Built for both sides of a <span className="italic text-forest-700">handshake</span>
             </>
           }
-          description="Exploitation thrives on asymmetric records. WurkUp gives workers and contractors the same immutable ledger — so neither side has to argue about what happened."
+          description={tr(
+            lang,
+            'Exploitation thrives on asymmetric records. WurkUp gives workers and contractors the same immutable ledger — so neither side has to argue about what happened.',
+            'शोषण वहीं पनपता है जहाँ रिकॉर्ड एक पक्ष के पास हो। WurkUp कामगार और ठेकेदार दोनों को एक ही अपरिवर्तनीय बही देता है — ताकि किसी को यह बहस न करनी पड़े कि असल में हुआ क्या।',
+          )}
         />
 
         <div className="mt-12 grid items-stretch gap-6 md:grid-cols-2 lg:gap-8">
@@ -436,11 +443,10 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
                 </div>
 
                 <h3 className="mt-6 text-[1.35rem] leading-snug text-ink-950">
-                  Own the proof of every day you worked
+                  {tr(lang, 'Own the proof of every day you worked', 'जो भी दिन आपने काम किया, उसका सबूत आपके पास रहे')}
                 </h3>
                 <p className="mt-2.5 text-[13px] leading-relaxed text-ink-500">
-                  No more contractor diaries that vanish at settlement. Your muster, overtime and
-                  advances live in a record you can show to any authority.
+                  {tr(lang, 'No more contractor diaries that vanish at settlement. Your muster, overtime and advances live in a record you can show to any authority.', 'अब ठेकेदार की वे डायरियाँ नहीं जो भुगतान के समय गायब हो जाएँ। आपकी हाजिरी, ओवरटाइम और एडवांस एक ऐसे रिकॉर्ड में रहते हैं जो आप किसी भी अधिकारी को दिखा सकते हैं।')}
                 </p>
 
                 <ul className="mt-6 space-y-3">
@@ -448,7 +454,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
                     ['Permanent QR pass', 'One reusable credential with zero private data.'],
                     ['Plain-language khata', 'Earned, advanced, due — explained line by line.'],
                     ['Approval control', 'A contractor cannot finalise a shift without you.'],
-                    ['Samadhan grievances', 'Structured statutory filing under MP BOCW norms.'],
+                    ['Samadhan grievances', 'A documented wage grievance with muster evidence attached.'],
                   ].map(([title, body]) => (
                     <li key={title} className="flex gap-3">
                       <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-forest-50 text-forest-700">
@@ -467,7 +473,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
                 onClick={() => onNavigate('create-account')}
                 className="btn btn-primary mt-8 w-full justify-between"
               >
-                <span>Register as a worker</span>
+                <span>{tr(lang, 'Register as a worker', 'श्रमिक के रूप में पंजीकरण करें')}</span>
                 <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
               </button>
             </SpotlightCard>
@@ -487,11 +493,14 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
                 </div>
 
                 <h3 className="mt-6 text-[1.35rem] leading-snug text-white">
-                  Run a compliant muster with no paperwork
+                  {tr(lang, 'Run a compliant muster with no paperwork', 'बिना कागज़ी कार्रवाई के नियम-सम्मत हाजिरी चलाएँ')}
                 </h3>
                 <p className="mt-2.5 text-[13px] leading-relaxed text-sand-200/60">
-                  Replace the khata diary with a live site register that settles disputes before
-                  they start — and produces audit-ready evidence on demand.
+                  {tr(
+                    lang,
+                    'Replace the khata diary with a live site register that settles disputes before they start — and produces audit-ready evidence on demand.',
+                    'खाता डायरी की जगह साइट का लाइव रजिस्टर — विवाद शुरू होने से पहले ही सुलझ जाता है, और ऑडिट के लिए सबूत तुरंत तैयार मिलते हैं।',
+                  )}
                 </p>
 
                 <ul className="mt-6 space-y-3">
@@ -518,7 +527,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
                 onClick={() => onNavigate('create-account')}
                 className="btn btn-gold mt-8 w-full justify-between"
               >
-                <span>Register as a contractor</span>
+                <span>{tr(lang, 'Register as a contractor', 'ठेकेदार के रूप में पंजीकरण करें')}</span>
                 <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
               </button>
             </SpotlightCard>
@@ -539,8 +548,8 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
             <SectionHeading
               align="left"
               eyebrow="The chain of custody"
-              title="A shift becomes a record in four verifiable steps"
-              description="Each step writes a signed event. Break one link and the audit bench shows exactly where the chain snapped."
+              title={tr(lang, 'A shift becomes a record in four verifiable steps', 'एक शिफ्ट चार सत्यापन-योग्य चरणों में रिकॉर्ड बनती है')}
+              description={tr(lang, 'Each step writes a signed event. Break one link and the audit bench shows exactly where the chain snapped.', 'हर चरण एक हस्ताक्षरित घटना दर्ज करता है। एक कड़ी तोड़िए और ऑडिट बेंच ठीक वह जगह दिखा देता है जहाँ श्रृंखला टूटी।')}
             />
             <button
               onClick={() => onNavigate('how-it-works')}
@@ -603,8 +612,8 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
       <section className="mt-24">
         <SectionHeading
           eyebrow="Engineering standards"
-          title="Four guarantees that are enforced in code, not in a policy PDF"
-          description="Every rule below is implemented, tested and visible in the audit bench."
+          title={tr(lang, 'Four guarantees that are enforced in code, not in a policy PDF', 'चार गारंटियाँ जो कोड में लागू हैं, किसी नीति-पत्र में नहीं')}
+          description={tr(lang, 'Every rule below is implemented, tested and visible in the audit bench.', 'नीचे का हर नियम लागू है, परखा गया है और ऑडिट बेंच में दिखता है।')}
         />
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -661,7 +670,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
           <div className="relative min-h-[18rem] overflow-hidden">
             <img
               src="/assets/images/construction_site_muster_1792385014214.jpg"
-              alt="Site supervisors reviewing a digital muster roll on a tablet at a Madhya Pradesh infrastructure project"
+              alt={tr(lang, 'Site supervisors reviewing a digital muster roll on a tablet at a Madhya Pradesh infrastructure project', 'मध्य प्रदेश की एक अवसंरचना परियोजना में टैबलेट पर डिजिटल हाजिरी देखते साइट सुपरवाइज़र')}
               className="absolute inset-0 h-full w-full object-cover transition-transform duration-[1400ms] hover:scale-105"
               loading="lazy"
               decoding="async"
@@ -670,7 +679,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
             <div className="absolute inset-x-0 bottom-0 p-6">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold text-ink-900 backdrop-blur">
-                  <MapPin className="h-3 w-3 text-forest-700" /> Indore Metro corridor
+                  <MapPin className="h-3 w-3 text-forest-700" /> {tr(lang, 'Indore Metro corridor', 'इंदौर मेट्रो कॉरिडोर')}
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold text-ink-900 backdrop-blur">
                   <Clock className="h-3 w-3 text-brass-600" /> Field-tested on site
@@ -681,7 +690,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
 
           <div className="flex flex-col justify-center p-8 sm:p-12">
             <Reveal>
-              <span className="eyebrow text-forest-700">Why it matters</span>
+              <span className="eyebrow text-forest-700">{tr(lang, 'Why it matters', 'यह क्यों मायने रखता है')}</span>
             </Reveal>
             <Reveal delay={80}>
               <h2 className="mt-4 text-[1.75rem] leading-tight text-ink-950 sm:text-[2.1rem]">
@@ -735,8 +744,8 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, lang, onEnterJudgeDemo }
           <SectionHeading
             align="left"
             eyebrow="Questions workers ask"
-            title="Straight answers, no fine print"
-            description="If something here is unclear, call the helpline — a human will walk you through it in Hindi or English."
+            title={tr(lang, 'Straight answers, no fine print', 'सीधे जवाब, कोई छिपी शर्त नहीं')}
+            description={tr(lang, 'If something here is unclear, call the helpline — a human will walk you through it in Hindi or English.', 'अगर कुछ समझ न आए तो हेल्पलाइन पर कॉल करें — कोई व्यक्ति हिंदी या अंग्रेज़ी में समझा देगा।')}
           />
           <Reveal delay={200}>
             <a

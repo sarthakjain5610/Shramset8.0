@@ -4,6 +4,7 @@ import { AppRoute } from '../../services/router';
 import { APP_CONFIG } from '../../config';
 import { Reveal } from '../ui/Reveal';
 import { BrandMark } from '../ui/BrandMark';
+import { Language } from '../../services/i18n';
 
 interface AuthLayoutProps {
   eyebrow: string;
@@ -18,13 +19,21 @@ interface AuthLayoutProps {
   width?: 'md' | 'lg';
   asideTitle?: string;
   asidePoints?: string[];
+  lang?: Language;
 }
 
-const DEFAULT_POINTS = [
+const DEFAULT_POINTS_EN = [
   'A reusable QR pass that carries zero personal data',
   'Statutory wage maths computed in integer paise',
   'Every muster punch needs your written approval',
   'A SHA-256 chain that exposes backdated edits',
+];
+
+const DEFAULT_POINTS_HI = [
+  'बार-बार काम आने वाला QR पास, जिसमें कोई निजी जानकारी नहीं होती',
+  'वैधानिक मजदूरी की गणना पूरे पैसे में',
+  'हर मस्टर प्रविष्टि के लिए आपकी लिखित मंज़ूरी ज़रूरी',
+  'SHA-256 चेन, जो पीछे की तारीख वाले बदलाव उजागर करती है',
 ];
 
 /**
@@ -40,9 +49,15 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
   children,
   footer,
   width = 'md',
-  asideTitle = 'A work record that cannot be quietly rewritten.',
-  asidePoints = DEFAULT_POINTS,
+  lang = 'en',
+  asideTitle = lang === 'hi'
+    ? 'ऐसा कार्य रिकॉर्ड जिसे चुपचाप बदला नहीं जा सकता।'
+    : 'A work record that cannot be quietly rewritten.',
+  asidePoints = lang === 'hi' ? DEFAULT_POINTS_HI : DEFAULT_POINTS_EN,
 }) => {
+  // Bilingual helper: every user-facing string in this component is authored in
+  // both languages, so a Hindi reader never sees an English fragment.
+  const tr = (en: string, hi: string) => (lang === 'hi' ? hi : en);
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-8 py-4 lg:grid-cols-[0.95fr_1.05fr] lg:items-stretch lg:gap-10 lg:py-8">
       {/* Promise panel */}
@@ -143,7 +158,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
               className="inline-flex items-center gap-1.5 font-semibold text-ink-500 transition-colors hover:text-forest-800 cursor-pointer"
             >
               <ArrowLeft className="h-3 w-3" />
-              Back to home
+              {tr('Back to home', 'होम पर वापस')}
             </button>
             <span className="inline-flex items-center gap-1.5">
               <Lock className="h-3 w-3" />

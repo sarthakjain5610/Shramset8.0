@@ -39,7 +39,7 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
               </span>
             </div>
             <p className="text-[10px] text-slate-500 hidden md:block whitespace-nowrap truncate max-w-[220px]">
-              Verified Digital Work & Wage Records
+              {lang === 'hi' ? 'सत्यापित डिजिटल कार्य एवं मजदूरी रिकॉर्ड' : 'Verified Digital Work & Wage Records'}
             </p>
           </button>
         </div>
@@ -115,7 +115,7 @@ export const PublicHeader: React.FC<PublicHeaderProps> = ({
           <button
             onClick={onEnterJudgeDemo}
             className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
-            title="Explore Bal Vigyan Judge Demo & Audit Suite"
+            title={lang === 'hi' ? 'बाल विज्ञान जज डेमो और ऑडिट सूट देखें' : 'Explore Bal Vigyan Judge Demo & Audit Suite'}
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-600" />
             <span>Judge Demo</span>

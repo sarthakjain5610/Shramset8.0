@@ -474,7 +474,7 @@ export const WageProtectionLedger: React.FC<WageProtectionLedgerProps> = ({
                               <button
                                 onClick={() => onAcknowledgePayment(entry.id)}
                                 className="px-1.5 py-0.5 text-[10px] bg-ink-900 hover:bg-ink-800 text-white rounded font-medium cursor-pointer"
-                                title="Confirm receipt as worker"
+                                title={lang === 'hi' ? 'कामगार के रूप में प्राप्ति की पुष्टि करें' : 'Confirm receipt as worker'}
                               >
                                 {lang === 'hi' ? 'स्वीकारें' : 'Acknowledge'}
                               </button>

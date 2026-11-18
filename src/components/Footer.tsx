@@ -36,7 +36,10 @@ const TRUST_LINKS: { label: string; route: AppRoute }[] = [
   { label: 'Password recovery', route: 'forgot-password' },
 ];
 
-export const Footer: React.FC<FooterProps> = ({ onNavigate, onEnterJudgeDemo, lang = 'en' }) => {
+export const Footer: React.FC<FooterProps> = ({ onNavigate, onEnterJudgeDemo, lang = 'en' }) => {  // Bilingual helper: every user-facing string in this component is authored in
+  // both languages, so a Hindi reader never sees an English fragment.
+  const tr = (en: string, hi: string) => (lang === 'hi' ? hi : en);
+
   const year = new Date().getFullYear();
   const copy = getPublicCopy(lang);
 
@@ -73,10 +76,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onEnterJudgeDemo, la
 
             <div className="mt-6 flex flex-wrap gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-sand-200/70">
-                <ShieldCheck className="h-3 w-3 text-forest-300" /> MP Minimum Wages aligned
+                <ShieldCheck className="h-3 w-3 text-forest-300" /> {tr('MP Minimum Wages aligned', 'एमपी न्यूनतम मजदूरी के अनुरूप')}
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-sand-200/70">
-                <LockKeyhole className="h-3 w-3 text-brass-300" /> SHA-256 audit chain
+                <LockKeyhole className="h-3 w-3 text-brass-300" /> {tr('SHA-256 audit chain', 'SHA-256 ऑडिट चेन')}
               </span>
             </div>
           </div>
@@ -102,7 +105,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onEnterJudgeDemo, la
           </nav>
 
           {/* Trust */}
-          <nav aria-label="Trust and legal">
+          <nav aria-label={tr('Trust and legal', 'भरोसा और कानूनी जानकारी')}>
             <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-sand-200/55">
               {copy.footerTrust}
             </h3>
@@ -195,9 +198,9 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onEnterJudgeDemo, la
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
             <span>© {year} WurkUp</span>
             <span className="text-white/15">·</span>
-            <span>Senior Bal Vigyan Innovation, Indore MP</span>
+            <span>{tr('Senior Bal Vigyan Innovation, Indore MP', 'सीनियर बाल विज्ञान इनोवेशन, इंदौर (म.प्र.)')}</span>
             <span className="hidden text-white/15 sm:inline">·</span>
-            <span className="hidden sm:inline">Local-first · Supabase ready</span>
+            <span className="hidden sm:inline">{tr('Local-first · Supabase ready', 'लोकल-फ़र्स्ट · सुपाबेस तैयार')}</span>
           </div>
 
           <button

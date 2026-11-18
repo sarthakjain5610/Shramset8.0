@@ -146,7 +146,7 @@ export const NewWorkerModal: React.FC<NewWorkerModalProps> = ({
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Radheshyam Sharma"
+                placeholder={lang === 'hi' ? 'जैसे राधेश्याम शर्मा' : 'e.g. Radheshyam Sharma'}
                 className="w-full bg-sand-50 border border-ink-300 rounded-lg p-2.5 text-ink-900 focus:outline-none focus:ring-1 focus:ring-brass-500 font-medium"
               />
             </div>
@@ -206,7 +206,11 @@ export const NewWorkerModal: React.FC<NewWorkerModalProps> = ({
               required
               value={trade}
               onChange={(e) => setTrade(e.target.value)}
-              placeholder="e.g. Mason, Helper, Carpenter, Electrician"
+              placeholder={
+                lang === 'hi'
+                  ? 'जैसे मिस्त्री, हेल्पर, बढ़ई, इलेक्ट्रीशियन'
+                  : 'e.g. Mason, Helper, Carpenter, Electrician'
+              }
               className="w-full bg-sand-50 border border-ink-300 rounded-lg p-2.5 text-ink-900 focus:outline-none focus:ring-1 focus:ring-brass-500"
             />
           </div>
@@ -281,7 +285,7 @@ export const NewWorkerModal: React.FC<NewWorkerModalProps> = ({
                 type="text"
                 value={emergencyName}
                 onChange={(e) => setEmergencyName(e.target.value)}
-                placeholder="e.g. Suman Devi"
+                placeholder={lang === 'hi' ? 'जैसे सुमन देवी' : 'e.g. Suman Devi'}
                 className="w-full bg-sand-50 border border-ink-300 rounded-lg p-2.5 text-ink-900 focus:outline-none focus:ring-1 focus:ring-brass-500"
               />
             </div>

@@ -125,6 +125,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenJudgeTourModal,
   onEnterJudgeDemo = () => {},
 }) => {
+  // Bilingual helper for component-local chrome strings.
+  const tr = (en: string, hi: string) => (lang === 'hi' ? hi : en);
+
   const isAuthed = authState?.isAuthenticated ?? false;
   const user = authState?.user;
   const isJudgeDemo = authState?.isJudgeDemo ?? false;
@@ -265,7 +268,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 onClick={onSignOut}
                 className="inline-flex items-center gap-1.5 rounded-full border border-ink-200 bg-white/80 px-3 py-1.5 text-[11px] font-bold text-ink-600 transition-all hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
-                title="Sign out of your account"
+                title={tr('Sign out of your account', 'अपने खाते से साइन आउट करें')}
               >
                 <LogOut className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Sign out</span>
@@ -323,7 +326,7 @@ export const Header: React.FC<HeaderProps> = ({
                       value={selectedWorkerId}
                       onChange={(e) => onSelectWorker(e.target.value)}
                       className="rounded-lg border border-sand-300 bg-white px-2 py-1 text-[11px] font-bold text-ink-900 shadow-2xs focus:border-forest-500 focus:outline-none cursor-pointer max-w-[180px] sm:max-w-none truncate"
-                      aria-label="Select worker profile"
+                      aria-label={tr('Select worker profile', 'श्रमिक प्रोफ़ाइल चुनें')}
                     >
                       {workers.map((w) => (
                         <option key={w.id} value={w.id}>
@@ -412,7 +415,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onEnterJudgeDemo}
               className="hidden items-center gap-1.5 rounded-full border border-brass-300/70 bg-brass-50/80 px-3 py-1.5 text-[11px] font-bold text-brass-800 transition-all hover:border-brass-400 hover:bg-brass-100 lg:flex cursor-pointer"
-              title="Open the isolated Judge Demo & cryptographic audit suite"
+              title={tr('Open the isolated Judge Demo & cryptographic audit suite', 'अलग जज डेमो और क्रिप्टोग्राफ़िक ऑडिट सूट खोलें')}
             >
               <Sparkles className="h-3.5 w-3.5 text-brass-600" />
               <span>{copy.judgeDemo}</span>

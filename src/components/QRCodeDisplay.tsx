@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
+import { Language } from '../services/i18n';
 
 interface QRCodeDisplayProps {
   value: string;
   size?: number;
   className?: string;
+  lang?: Language;
 }
 
 /**
@@ -15,7 +17,11 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
   value,
   size = 140,
   className = '',
+  lang = 'en',
 }) => {
+  // Bilingual helper: every user-facing string in this component is authored in
+  // both languages, so a Hindi reader never sees an English fragment.
+  const tr = (en: string, hi: string) => (lang === 'hi' ? hi : en);
   const [dataUrl, setDataUrl] = useState<string>('');
   const [hasError, setHasError] = useState(false);
 
@@ -55,7 +61,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
         style={{ width: size, height: size }}
         className={`bg-sand-50 border border-sand-200 rounded flex items-center justify-center p-2 text-center text-[10px] text-ink-400 ${className}`}
       >
-        <span>Loading QR...</span>
+        <span>{tr('Loading QR...', 'QR लोड हो रहा है...')}</span>
       </div>
     );
   }
@@ -63,7 +69,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
   return (
     <img
       src={dataUrl}
-      alt="Standards-compliant QR Code for worker reference"
+      alt={tr('Standards-compliant QR Code for worker reference', 'मानक-अनुरूप QR कोड, कामगार संदर्भ हेतु')}
       width={size}
       height={size}
       className={`select-none bg-white rounded-md shadow-xs ${className}`}

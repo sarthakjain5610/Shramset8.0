@@ -30,7 +30,8 @@ import { QRCodeDisplay } from '../QRCodeDisplay';
 import { WorkerCard } from '../WorkerCard';
 import { ContactVerificationModal } from '../ContactVerificationModal';
 import { buildVerifyUrl } from '../../services/verifyLink';
-import { WorkerCloudWorkspace } from './WorkerCloudWorkspace';
+import { WorkerDashboard } from '../dashboard/worker/WorkerDashboard';
+import { buildSubmissionReference } from '../../services/submissionReference';
 
 interface WorkerPortalProps {
   user: UserProfile;
@@ -166,7 +167,8 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
       filingDate: new Date().toISOString().split('T')[0],
       status: 'submitted',
       description: disputeDesc.trim(),
-      dloFilingRef: `MP-DLO-IND-${Date.now().toString().slice(-5)}`,
+      // WURK UP internal submission reference; nothing is filed with a government office.
+      dloFilingRef: buildSubmissionReference(),
       evidenceMusterCount: attendance.length,
       isDemoRecord: user.isJudgeDemo,
     };
@@ -194,21 +196,21 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-forest-800 bg-forest-50 border border-forest-200 px-2 py-0.5 rounded-md">
             <CheckCircle2 className="w-3 h-3 text-forest-600" />
-            <span>Manual Check Completed</span>
+            <span>{bi(lang, 'Manual Check Completed', 'मैनुअल जाँच पूरी')}</span>
           </span>
         );
       case 'shared_with_counterpart':
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-sky-800 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-md">
             <Phone className="w-3 h-3 text-sky-600" />
-            <span>Shared with Site Supervisor</span>
+            <span>{bi(lang, 'Shared with Site Supervisor', 'साइट सुपरवाइज़र के साथ साझा')}</span>
           </span>
         );
       case 'disputed_or_review':
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-800 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">
             <AlertTriangle className="w-3 h-3 text-rose-600" />
-            <span>Disputed / Review Required</span>
+            <span>{bi(lang, 'Disputed / Review Required', 'विवादित / समीक्षा ज़रूरी')}</span>
           </span>
         );
       case 'number_supplied':
@@ -396,7 +398,11 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
                 {bi(lang, 'Welcome to WurkUp!', 'WurkUp में आपका स्वागत है!')}
               </h3>
               <p className="text-xs text-ink-600 max-w-md mx-auto leading-relaxed">
-                Your genuine account has been configured with an opaque QR pass. When you arrive at a construction site, show your QR pass to the contractor to punch your first shift.
+                {bi(
+                  lang,
+                  'Your genuine account has been configured with an opaque QR pass. When you arrive at a construction site, show your QR pass to the contractor to punch your first shift.',
+                  'आपका असली खाता एक गूढ़ QR पास के साथ तैयार है। निर्माण साइट पर पहुँचने पर ठेकेदार को अपना QR पास दिखाएँ, ताकि आपकी पहली शिफ्ट दर्ज हो सके।',
+                )}
               </p>
               <div className="pt-2">
                 <button
@@ -411,12 +417,14 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
             /* Recent Shifts Preview */
             <div className="bg-white rounded-2xl border border-sand-200 overflow-hidden">
               <div className="px-5 py-3 border-b border-sand-200 bg-sand-50/50 flex justify-between items-center">
-                <h3 className="text-xs font-bold text-ink-900 uppercase tracking-wider">Recent Work Records</h3>
+                <h3 className="text-xs font-bold text-ink-900 uppercase tracking-wider">
+                  {bi(lang, 'Recent Work Records', 'हाल के कार्य रिकॉर्ड')}
+                </h3>
                 <button
                   onClick={() => setActiveTab('records')}
                   className="text-xs text-forest-800 font-semibold hover:underline"
                 >
-                  View All ({attendance.length})
+                  {bi(lang, 'View All', 'सभी देखें')} ({attendance.length})
                 </button>
               </div>
               <div className="divide-y divide-sand-100">
@@ -445,13 +453,21 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
       {activeTab === 'records' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-ink-900">Attendance & Shift Records</h2>
-            <span className="text-xs text-ink-500 font-mono">{attendance.length} Shifts Logged</span>
+            <h2 className="text-base font-bold text-ink-900">
+              {bi(lang, 'Attendance & Shift Records', 'हाजिरी और शिफ्ट रिकॉर्ड')}
+            </h2>
+            <span className="text-xs text-ink-500 font-mono">
+              {bi(lang, `${attendance.length} Shifts Logged`, `${attendance.length} शिफ्ट दर्ज`)}
+            </span>
           </div>
 
           {attendance.length === 0 ? (
             <div className="bg-white rounded-2xl border border-sand-200 p-8 text-center text-xs text-ink-500">
-              No shift records have been logged yet for this account. Shifts approved through your contractor will appear here.
+              {bi(
+                lang,
+                'No shift records have been logged yet for this account. Shifts approved through your contractor will appear here.',
+                'इस खाते में अभी कोई शिफ्ट दर्ज नहीं है। ठेकेदार द्वारा स्वीकृत शिफ्ट यहाँ दिखेंगी।',
+              )}
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-sand-200 overflow-hidden shadow-xs">
@@ -499,16 +515,24 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
       {activeTab === 'wages' && (
         <div className="space-y-6">
           <div className="bg-sand-50 rounded-2xl border border-brass-200 p-5 space-y-3">
-            <h2 className="text-base font-bold text-ink-900">Authoritative Wage & Khata Balance</h2>
+            <h2 className="text-base font-bold text-ink-900">
+              {bi(lang, 'Authoritative Wage & Khata Balance', 'प्रामाणिक मजदूरी और खाता बैलेंस')}
+            </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1 text-xs">
               <div className="p-3 bg-white rounded-xl border border-sand-200">
-                <span className="text-ink-500 block">Total Statutory Earned:</span>
+                <span className="text-ink-500 block">
+                  {bi(lang, 'Total Statutory Earned:', 'कुल वैधानिक कमाई:')}
+                </span>
                 <span className="font-mono font-bold text-lg text-forest-800">{formatCurrency(stats.grossWagesEarned)}</span>
               </div>
               <div className="p-3 bg-white rounded-xl border border-sand-200">
-                <span className="text-ink-500 block">Total Payouts / Advances:</span>
+                <span className="text-ink-500 block">
+                  {bi(lang, 'Total Payouts / Advances:', 'कुल भुगतान / एडवांस:')}
+                </span>
                 <span className="font-mono font-bold text-lg text-ink-800">{formatCurrency(stats.paymentsRecorded)}</span>
-                <span className="text-[10px] text-ink-400 block mt-0.5">({formatCurrency(stats.paymentsAcknowledged)} acknowledged by you)</span>
+                <span className="text-[10px] text-ink-400 block mt-0.5">
+                  ({formatCurrency(stats.paymentsAcknowledged)} {bi(lang, 'acknowledged by you', 'आपके द्वारा पुष्टि किए गए')})
+                </span>
               </div>
               <div className="p-3 bg-white rounded-xl border border-sand-200">
                 <span className="text-ink-500 block">Net Outstanding Dues:</span>
@@ -519,13 +543,21 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
 
           <div className="bg-white rounded-2xl border border-sand-200 overflow-hidden shadow-xs">
             <div className="px-5 py-3 border-b border-sand-200 bg-sand-50 flex items-center justify-between">
-              <h3 className="text-xs font-bold text-ink-900 uppercase tracking-wider">Disbursements & Wage Credits</h3>
-              <span className="text-xs text-ink-500 font-mono">{ledger.length} Transactions</span>
+              <h3 className="text-xs font-bold text-ink-900 uppercase tracking-wider">
+                {bi(lang, 'Disbursements & Wage Credits', 'भुगतान और मजदूरी जमा')}
+              </h3>
+              <span className="text-xs text-ink-500 font-mono">
+                {bi(lang, `${ledger.length} Transactions`, `${ledger.length} लेन-देन`)}
+              </span>
             </div>
 
             {ledger.length === 0 ? (
               <div className="p-8 text-center text-xs text-ink-500">
-                No wage ledger entries recorded yet. Disbursements made by your contractor will appear here for your explicit acknowledgment.
+                {bi(
+                  lang,
+                  'No wage ledger entries recorded yet. Disbursements made by your contractor will appear here for your explicit acknowledgment.',
+                  'मजदूरी बही में अभी कोई प्रविष्टि नहीं है। ठेकेदार द्वारा किए गए भुगतान आपकी स्पष्ट पुष्टि के लिए यहाँ दिखेंगे।',
+                )}
               </div>
             ) : (
               <div className="divide-y divide-sand-100">
@@ -579,9 +611,15 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
               <div className="w-10 h-10 rounded-xl bg-forest-100 text-forest-800 flex items-center justify-center mx-auto">
                 <QrCode className="w-5 h-5" />
               </div>
-              <h2 className="text-lg font-bold text-ink-900">Your Permanent Smart Shram Pass</h2>
+              <h2 className="text-lg font-bold text-ink-900">
+                {bi(lang, 'Your Permanent Smart Shram Pass', 'आपका स्थायी स्मार्ट श्रम पास')}
+              </h2>
               <p className="text-xs text-ink-600 leading-relaxed">
-                Show this QR pass to any authorized site supervisor to record shifts. It contains exclusively an opaque token — zero phone numbers or private wages are exposed.
+                {bi(
+                  lang,
+                  'Show this QR pass to any authorized site supervisor to record shifts. It contains exclusively an opaque token — zero phone numbers or private wages are exposed.',
+                  'शिफ्ट दर्ज कराने के लिए यह QR पास किसी भी अधिकृत साइट सुपरवाइज़र को दिखाएँ। इसमें सिर्फ़ एक गूढ़ टोकन होता है — न फ़ोन नंबर, न निजी मजदूरी बाहर आती है।',
+                )}
               </p>
 
               <div className="p-4 bg-sand-50 rounded-2xl border border-sand-200 inline-block mx-auto">
@@ -627,12 +665,14 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-bold text-ink-900">Contractor Shift & Wage Requests</h2>
-              <p className="text-xs text-ink-500">Review requests from site supervisors before they are finalized</p>
+              <p className="text-xs text-ink-500">
+                {bi(lang, 'Review requests from site supervisors before they are finalized', 'साइट सुपरवाइज़र के अनुरोध अंतिम होने से पहले जाँचें')}
+              </p>
             </div>
             <button
               onClick={loadData}
               className="p-1.5 text-ink-500 hover:text-ink-800 rounded-lg border border-sand-200 transition-colors"
-              title="Refresh requests"
+              title={bi(lang, 'Refresh requests', 'अनुरोध ताज़ा करें')}
             >
               <RefreshCw className="w-4 h-4" />
             </button>
@@ -640,7 +680,11 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
 
           {approvalRequests.length === 0 ? (
             <div className="bg-white rounded-2xl border border-sand-200 p-8 text-center text-xs text-ink-500">
-              No pending approval requests. When a contractor scans your QR pass and creates a shift entry, it will appear here for your approval.
+              {bi(
+                lang,
+                'No pending approval requests. When a contractor scans your QR pass and creates a shift entry, it will appear here for your approval.',
+                'कोई मंज़ूरी अनुरोध लंबित नहीं है। जब ठेकेदार आपका QR पास स्कैन कर शिफ्ट दर्ज करेगा, तो वह आपकी स्वीकृति के लिए यहाँ दिखेगा।',
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -709,7 +753,7 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
                           <button
                             onClick={() => handleReportSuspicious(req.id)}
                             className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                            title="Report Suspicious Contractor"
+                            title={bi(lang, 'Report Suspicious Contractor', 'संदिग्ध ठेकेदार की शिकायत करें')}
                           >
                             <AlertTriangle className="w-3.5 h-3.5" />
                           </button>
@@ -730,7 +774,13 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-bold text-ink-900">Dispute & Grievance Redressal (Samadhan)</h2>
-              <p className="text-xs text-ink-500">File formal wage disagreements under MP BOCW and DLO standards</p>
+              <p className="text-xs text-ink-500">
+                {bi(
+                  lang,
+                  'Record wage disagreements in WURK UP with a documented evidence trail',
+                  'मजदूरी से जुड़ी असहमति WURK UP में प्रमाण-सहित दर्ज करें',
+                )}
+              </p>
             </div>
             <button
               onClick={() => setShowNewDisputeModal(true)}
@@ -743,7 +793,7 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
 
           {grievances.length === 0 ? (
             <div className="bg-white rounded-2xl border border-sand-200 p-8 text-center text-xs text-ink-500">
-              No disputes logged. If a contractor underpays, denies recorded shifts, or makes arbitrary deductions, click "File Dispute" to generate an official claim.
+              No grievances logged. If a contractor underpays, denies recorded shifts, or makes arbitrary deductions, click "File Dispute" to record a documented grievance in WURK UP.
             </div>
           ) : (
             <div className="space-y-3">
@@ -753,7 +803,7 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-ink-900 text-sm capitalize">{g.disputeType.replace('_', ' ')}</span>
-                        <span className="font-mono text-[10px] text-ink-500">Ref: {g.dloFilingRef}</span>
+                        <span className="font-mono text-[10px] text-ink-500">WURK UP ref: {g.dloFilingRef}</span>
                       </div>
                       <p className="text-ink-500 mt-0.5">Contractor: {g.contractorName} · Site: {g.siteName}</p>
                     </div>
@@ -789,16 +839,20 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
       {activeTab === 'profile' && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl border border-sand-200 p-6 shadow-xs space-y-6">
-            <h2 className="text-base font-bold text-ink-900">Worker Profile & Contact Governance</h2>
+            <h2 className="text-base font-bold text-ink-900">
+              {bi(lang, 'Worker Profile & Contact Governance', 'कामगार प्रोफ़ाइल और संपर्क नियंत्रण')}
+            </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div className="p-3.5 bg-sand-50 rounded-xl border border-sand-200">
-                <span className="text-ink-500 block mb-1">Full Legal Name:</span>
+                <span className="text-ink-500 block mb-1">{bi(lang, 'Full Legal Name:', 'पूरा कानूनी नाम:')}</span>
                 <span className="font-semibold text-ink-900 text-sm">{user.fullName}</span>
               </div>
 
               <div className="p-3.5 bg-sand-50 rounded-xl border border-sand-200">
-                <span className="text-ink-500 block mb-1">Registered Mobile Number:</span>
+                <span className="text-ink-500 block mb-1">
+                  {bi(lang, 'Registered Mobile Number:', 'पंजीकृत मोबाइल नंबर:')}
+                </span>
                 <div className="flex items-center justify-between">
                   <span className="font-mono font-bold text-ink-900 text-sm">{user.phone}</span>
                   {getContactStatusBadge(user.contactVerificationStatus)}
@@ -824,12 +878,20 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
                 Mutual Contact Check History
               </h3>
               <p className="text-xs text-ink-500 mb-3">
-                Log of authorized counterparts who personally phoned to cross-check work details.
+                {bi(
+                  lang,
+                  'Log of authorized counterparts who personally phoned to cross-check work details.',
+                  'उन अधिकृत साथियों का रिकॉर्ड जिन्होंने स्वयं फ़ोन करके कार्य विवरण की पुष्टि की।',
+                )}
               </p>
 
               {!user.manualChecks || user.manualChecks.length === 0 ? (
                 <div className="p-4 bg-sand-50 rounded-xl border border-sand-200 text-center text-xs text-ink-500">
-                  No manual phone checks recorded yet. Your contractor can log a cross-check upon verifying your shift.
+                  {bi(
+                    lang,
+                    'No manual phone checks recorded yet. Your contractor can log a cross-check upon verifying your shift.',
+                    'अभी कोई मैनुअल फ़ोन जाँच दर्ज नहीं है। आपका ठेकेदार शिफ्ट सत्यापित करते समय क्रॉस-चेक दर्ज कर सकता है।',
+                  )}
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -881,8 +943,8 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
                   <p className="text-[11px] text-ink-500 mt-0.5 truncate">
                     {bi(
                       lang,
-                      'Preserved in cryptographic audit chain for Indore DLO.',
-                      'क्रिप्टोग्राफिक ऑडिट चेन में सुरक्षित और इंदौर श्रम अधिकारी हेतु प्रपत्र।'
+                      'Internal WURK UP record — not a government filing.',
+                      'WURK UP आंतरिक रिकॉर्ड — सरकारी फाइलिंग नहीं।'
                     )}
                   </p>
                 </div>
@@ -989,4 +1051,4 @@ const DemoWorkerPortal: React.FC<WorkerPortalProps> = ({ user, lang, onNavigateH
 /** Real accounts use the RLS/RPC-backed workspace; synthetic records remain demo-only. */
 export const WorkerPortal: React.FC<WorkerPortalProps> = (props) => props.user.isJudgeDemo
   ? <DemoWorkerPortal {...props} />
-  : <WorkerCloudWorkspace user={props.user} />;
+  : <WorkerDashboard user={props.user} lang={props.lang} />;
