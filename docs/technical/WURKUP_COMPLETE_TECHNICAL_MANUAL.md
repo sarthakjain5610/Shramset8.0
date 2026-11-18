@@ -818,7 +818,7 @@ the existing dictionary, and unverified by a native proofreader (§15.4 L3).
 | Suite | Command | Type | What it proves |
 | --- | --- | --- | --- |
 | Core | `npm test` | pure logic (no DOM) | money maths, hashing, anomaly rules, storage |
-| Authentication | `npm run test:auth` | jsdom + mocked auth client | registration, sign-in, recovery, rate limits |
+| Authentication | `npm run test:auth` (combined tree only) | jsdom + mocked auth client | registration, sign-in, recovery, rate limits |
 | Dashboard | `npm run test:dashboard` | SSR + jsdom + pure | RLS projections, copy parity, panels, grievance flow, crypto guard |
 | RLS contract | `npm run test:rls` | static analysis of migrations | the 42501 class cannot return |
 | RLS live | `npm run test:rls:live` | SQL against the project | real policies, real roles, real claims |
@@ -834,7 +834,7 @@ the existing dictionary, and unverified by a native proofreader (§15.4 L3).
 | --- | --- | --- |
 | TypeScript (`tsc --noEmit`) | **0 errors** | sandbox, Node 22 |
 | Core | **60 / 60** | headless |
-| Authentication | **21 / 21** | headless (mock client) |
+| Authentication | **21 / 21** (combined tree, §14.3 — the suite file ships with PR #11 and is absent on this branch) | headless (mock client) |
 | Dashboard | **189 / 189** | headless (SSR + jsdom) |
 | RLS contract (static) | **37 / 37** | headless |
 | RLS live (SQL, rolled back) | **9 / 9 scenario groups** | live Supabase project |
@@ -850,6 +850,12 @@ A temporary, never-pushed worktree merged PR #11 (`f69ccc5`) and PR #12 (`231fa4
 `main` (`d85ac8d`); the combined suite returned 60/60 core, 21/21 auth, 189/189 dashboard, 16/16
 render, 29/29 flows and a successful build. The procedure is documented in
 `docs/INTEGRATION_TESTING.md`; the worktree was deleted afterwards and no branch was pushed.
+
+The auth suite lives in `scripts/auth-registration-test.ts`, which is part of PR #11, so it is not
+present on this branch. `npm run test:all` used to chain that file and therefore failed here with
+`ERR_MODULE_NOT_FOUND`; the aggregate script no longer references it (the combined-tree run above is
+still the evidence for those 21 checks), and managing the aggregate script per branch is noted in
+§17.
 
 ### 14.4 Honest gaps in test evidence
 
@@ -976,6 +982,7 @@ re-running it is safe; migrations 1–6 are not to be touched.
 | Admin/support console | product | absent | design with audit trail before building |
 | Remove `@google/genai` | maintenance | declared, unused | delete or wire deliberately |
 | Automated browser CI | testing | manual script | run `test:browser` in a pipeline with a Chromium image |
+| `test:all` parity with the combined tree | testing | aggregate script omits PR #11's auth suite | re-add `scripts/auth-registration-test.ts` to it once PR #11 merges |
 | Custom domain | infrastructure | `workers.dev` only | add domain in Cloudflare + Supabase allow-list |
 | Judge Demo move to a dedicated route guard | hardening | explicit entry | optional |
 
@@ -1034,7 +1041,7 @@ unused by the UI), e-mail change notifications, CAPTCHA, anonymous sign-in.
 | `src/components/dashboard/worker|contractor/*` | panel implementations |
 | `src/components/*.tsx` | judge-demo modal, worker/contractor portals, modals, hero, header, footer |
 | `src/services/*` | auth, supabase client, dashboard data/analytics, i18n, copy, engines, storage, router |
-| `scripts/*` | test suites (`run-all-tests`, `auth-registration-test`, `dashboard-test`, `smoke-render`, `flow-test`), `i18n-audit`, `rls-contract-test`, `browser-verify`, figure generator |
+| `scripts/*` | test suites (`run-all-tests`, `dashboard-test`, `smoke-render`, `flow-test`, plus `auth-registration-test` from PR #11), `i18n-audit`, `rls-contract-test`, `browser-verify`, figure generator |
 | `supabase/migrations/*` | 7 SQL migrations |
 | `supabase/tests/rls_permissions.sql` | live RLS regression suite |
 | `docs/*` | dashboard, integration, handoff, this manual |

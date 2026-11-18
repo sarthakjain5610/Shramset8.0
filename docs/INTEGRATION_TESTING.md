@@ -96,7 +96,10 @@ Delete the conflict markers and keep **all three** commands. The merged block mu
 "test:auth": "tsx scripts/auth-registration-test.ts",
 ```
 
-(`test:dashboard` comes from PR #12, `test:auth` from PR #11; `test:all` runs both.)
+(`test:dashboard` comes from PR #12, `test:auth` from PR #11; `test:all` runs both. On the PR #12
+branch alone `scripts/auth-registration-test.ts` does not exist, so its `test:all` omits that file
+and has no `test:auth` script — the combined tree above is the only place those 21 checks can run.
+When this conflict is resolved, re-add both lines.)
 
 ### `scripts/smoke-render.ts`
 

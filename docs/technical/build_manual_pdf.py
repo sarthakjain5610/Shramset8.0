@@ -566,10 +566,14 @@ def build_table(block_lines, styles, doc, section):
     label = "Table %d" % doc.table_no
     doc.table_labels.append(label)
     caption = Paragraph(label, styles["tcaption"])
-    # keep a table with its number: every table here is shorter than a page, and a
-    # table that loses its number on a page break is harder to reference than one that
-    # simply starts on the next page.
-    return [KeepTogether([caption, t]), Spacer(1, 7.5)]
+    # Keep a table with its number when the pair fits a page. A table taller than the
+    # frame must be allowed to split: wrapping it in KeepTogether pushes the whole block
+    # to the next page and can leave the preceding page holding nothing but a heading.
+    frame_h = PAGE_H - M_TOP - M_BOTTOM
+    if estimate_height(t) + 22 < frame_h * 0.9:
+        return [KeepTogether([caption, t]), Spacer(1, 7.5)]
+    caption.keepWithNext = True
+    return [caption, t, Spacer(1, 7.5)]
 
 
 def callout(text, styles):
@@ -640,13 +644,18 @@ def estimate_height(flowable, avail_w=CONTENT_W, avail_h=None):
         return avail_h
 
 
+COMMIT_HEADING_SPACE = 300  # points a heading must have under it before a tall table
+
+
 def fix_orphan_headings(story):
     """Keep a heading together with its own text, or with the block that follows it.
 
-    Two rules, both aimed at the same defect (a heading stranded at the foot of a page):
+    Three rules, all aimed at the same defect (a heading stranded at the foot of a page):
       * heading + its introductory paragraphs travel together, and the table or figure
         that follows may start on the next page;
-      * a heading with no text before a figure/table is merged with that block.
+      * a heading with no text before a small enough figure/table is merged with that block;
+      * a heading with no text before a block too tall to merge gets a conditional page
+        break in front of it, so heading and table still start the next page together.
     """
     frame_h = PAGE_H - M_TOP - M_BOTTOM
     out = []
@@ -677,6 +686,12 @@ def fix_orphan_headings(story):
                     out.append(KeepTogether(group + content))
                     i = j + 1
                     continue
+                # too tall to keep the whole block on one page: rather than leave the
+                # heading alone at the bottom, start it on a page with room underneath
+                out.append(CondPageBreak(min(frame_h * 0.55, COMMIT_HEADING_SPACE)))
+                out.append(KeepTogether(group))
+                i = j
+                continue
         out.append(item)
         i += 1
     return out
